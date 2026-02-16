@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# Generated reports
+output.html
+
+# Uploaded files
+uploads/
+
+# System specific
+.DS_Store
+Thumbs.db
+
+# Test data
+*.xlsx
+*.xls
