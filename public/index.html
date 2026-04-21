@@ -479,6 +479,37 @@
             background: #0077b6;
             color: #fff;
         }
+
+        /* Sunset Theme */
+        body.sunset-theme {
+            --neon-cyan: #ff7b00;
+            --neon-violet: #ff0055;
+            --bg-dark: #1f0b0f;
+            --panel-bg: rgba(40, 15, 20, 0.8);
+            color: #ffe6e6;
+            background-color: var(--bg-dark);
+        }
+        body.sunset-theme .sidebar { background: rgba(30, 10, 15, 0.9); border-right: 1px solid rgba(255, 123, 0, 0.2); }
+        body.sunset-theme .chat-pane { background: rgba(30, 10, 15, 0.9); border-left: 1px solid rgba(255, 0, 85, 0.2); }
+        body.sunset-theme .chat-header { color: #ffebcd; border-bottom: 1px solid rgba(255, 0, 85, 0.2); }
+        body.sunset-theme .chat-input-area { background: rgba(20, 5, 10, 0.9); border-top: 1px solid rgba(255, 123, 0, 0.2); }
+        body.sunset-theme .input-wrapper { background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 123, 0, 0.3); }
+        body.sunset-theme .chat-input { color: #ffe6e6; }
+        body.sunset-theme .chat-input::placeholder { color: #aa8888; }
+        body.sunset-theme .msg-container.user .msg-bubble { background: rgba(255, 123, 0, 0.15); color: #fff; border: 1px solid rgba(255, 123, 0, 0.3); }
+        body.sunset-theme .msg-container.ai .msg-bubble { background: rgba(255, 0, 85, 0.15); color: #ffe6e6; border: 1px solid rgba(255, 0, 85, 0.3); }
+        body.sunset-theme .msg-sender { color: #ffb380; }
+        body.sunset-theme .insight-item { background: rgba(255, 123, 0, 0.05); border: 1px solid rgba(255, 123, 0, 0.15); }
+        body.sunset-theme .insight-text { color: #ffe6e6; }
+        body.sunset-theme .logo { color: #ff7b00; text-shadow: 0 0 10px rgba(255, 123, 0, 0.4); }
+        body.sunset-theme .logo::before { background: #ff7b00; box-shadow: 0 0 10px #ff7b00; }
+        body.sunset-theme .status-badge { color: #ff7b00; border-color: #ff7b00; }
+        body.sunset-theme .welcome-screen h1 { background: linear-gradient(to right, #ffe6e6, #ff7b00); -webkit-background-clip: text; }
+        body.sunset-theme .welcome-screen p { color: #ffb380; }
+        body.sunset-theme .file-indicator { background: rgba(255, 0, 85, 0.15); border-color: #ff0055; color: #ffe6e6; }
+        body.sunset-theme .theme-toggle { border-color: #ff7b00; color: #ff7b00; background: transparent; }
+        body.sunset-theme .theme-toggle:hover { background: #ff7b00; color: #000; }
+        body.sunset-theme #matrix-bg { opacity: 0.1; filter: hue-rotate(320deg) brightness(1.5); }
     </style>
 </head>
 <body>
@@ -769,25 +800,30 @@
 
         // Theme Toggle Logic
         const themeToggle = document.getElementById('themeToggle');
+        const themes = ['dark', 'light', 'sunset'];
+        let currentThemeIndex = 0;
         
-        function setTheme(isLight) {
-            if (isLight) {
-                document.body.classList.add('light-theme');
-                localStorage.setItem('theme', 'light');
-            } else {
-                document.body.classList.remove('light-theme');
-                localStorage.setItem('theme', 'dark');
-            }
+        function setTheme(theme) {
+            document.body.classList.remove('light-theme', 'sunset-theme');
+            if (theme === 'light') document.body.classList.add('light-theme');
+            if (theme === 'sunset') document.body.classList.add('sunset-theme');
+            localStorage.setItem('theme', theme);
+            
+            const idx = themes.indexOf(theme);
+            currentThemeIndex = idx > -1 ? idx : 0;
         }
         
         // Retrieve saved theme or default to dark
-        if (localStorage.getItem('theme') === 'light') {
-            setTheme(true);
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme && themes.includes(savedTheme)) {
+            setTheme(savedTheme);
+        } else {
+            setTheme('dark');
         }
         
         themeToggle.addEventListener('click', () => {
-            const isLight = document.body.classList.contains('light-theme');
-            setTheme(!isLight);
+            currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+            setTheme(themes[currentThemeIndex]);
         });
 
     </script>
