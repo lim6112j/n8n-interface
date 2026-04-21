@@ -1,13 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logistics Analytics | Ciel Mobility AI Core</title>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@300;500;600;700&family=Inter:wght@300;400;600&display=swap"
-        rel="stylesheet">
+    <title>Ciel Mobility AI Agent</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@300;500;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --neon-cyan: #00f3ff;
@@ -17,22 +14,24 @@
             --danger: #ff2a6d;
         }
 
-        body {
-            font-family: 'Inter', sans-serif;
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
             background-color: var(--bg-dark);
             color: #e0e0e0;
-            min-height: 100vh;
+            height: 100vh;
             display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
+            overflow: hidden;
             background-image:
                 radial-gradient(circle at 15% 50%, rgba(189, 0, 255, 0.05) 0%, transparent 25%),
                 radial-gradient(circle at 85% 30%, rgba(0, 243, 255, 0.05) 0%, transparent 25%);
         }
 
-        /* Matrix Rain Background Effect */
         #matrix-bg {
             position: fixed;
             top: 0;
@@ -41,632 +40,80 @@
             height: 100%;
             z-index: -1;
             opacity: 0.15;
+            pointer-events: none;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 40px 20px;
-            flex-grow: 1;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* Header / Nav */
-        header {
+        /* Sidebar - Insights */
+        .sidebar {
+            width: 280px;
+            background: rgba(5, 10, 20, 0.85);
+            border-right: 1px solid rgba(0, 243, 255, 0.2);
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 60px;
-            padding-bottom: 20px;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .logo-container {
+            padding: 20px;
             border-bottom: 1px solid rgba(0, 243, 255, 0.2);
         }
 
         .logo {
             font-family: 'Orbitron', sans-serif;
-            font-size: 24px;
+            font-size: 16px;
             font-weight: 700;
             color: var(--neon-cyan);
             text-transform: uppercase;
-            letter-spacing: 2px;
             display: flex;
             align-items: center;
             gap: 10px;
-            text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
         }
 
         .logo::before {
             content: '';
             display: block;
-            width: 12px;
-            height: 12px;
+            width: 8px;
+            height: 8px;
             background: var(--neon-cyan);
             border-radius: 50%;
             box-shadow: 0 0 10px var(--neon-cyan);
         }
 
         .status-badge {
+            margin-top: 10px;
+            display: inline-block;
             font-family: 'Rajdhani', sans-serif;
-            font-weight: 600;
             color: var(--neon-cyan);
             border: 1px solid var(--neon-cyan);
-            padding: 4px 12px;
+            padding: 2px 8px;
             border-radius: 20px;
-            font-size: 14px;
-            letter-spacing: 1px;
-            box-shadow: 0 0 5px rgba(0, 243, 255, 0.2) inset;
-        }
-
-        /* Main Interface */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 40px;
-        }
-
-        .upload-panel {
-            background: var(--panel-bg);
-            border: 1px solid rgba(0, 243, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            padding: 60px;
-            text-align: center;
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .upload-panel::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
-            transform: translateX(-100%);
-            transition: transform 0.5s ease;
-        }
-
-        .upload-panel:hover {
-            border-color: rgba(0, 243, 255, 0.4);
-            box-shadow: 0 0 40px rgba(0, 243, 255, 0.1);
-        }
-
-        .upload-panel:hover::before {
-            transform: translateX(100%);
-            transition: transform 1.5s linear;
-        }
-
-        .upload-panel h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 36px;
-            margin-bottom: 10px;
-            background: linear-gradient(to right, #fff, var(--neon-cyan));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .upload-panel p {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 18px;
-            color: #8892b0;
-            margin-top: 0;
-            margin-bottom: 40px;
-        }
-
-        /* File Input Styling */
-        .file-drop-area {
-            border: 2px dashed rgba(189, 0, 255, 0.3);
-            border-radius: 12px;
-            padding: 40px;
-            cursor: pointer;
-            transition: all 0.3s;
-            position: relative;
-            background: rgba(189, 0, 255, 0.02);
-        }
-
-        .file-drop-area:hover {
-            border-color: var(--neon-violet);
-            background: rgba(189, 0, 255, 0.05);
-            box-shadow: 0 0 20px rgba(189, 0, 255, 0.1) inset;
-        }
-
-        input[type="file"] {
-            display: none;
-        }
-
-        .upload-icon {
-            font-size: 48px;
-            color: var(--neon-violet);
-            margin-bottom: 20px;
-            display: block;
-            text-shadow: 0 0 15px rgba(189, 0, 255, 0.5);
-        }
-
-        .file-name {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 20px;
-            font-weight: 600;
-            color: #fff;
-            display: block;
-        }
-
-        /* Button Styling */
-        button#uploadBtn {
-            background: linear-gradient(135deg, rgba(0, 243, 255, 0.1), rgba(189, 0, 255, 0.1));
-            color: var(--neon-cyan);
-            border: 1px solid var(--neon-cyan);
-            padding: 15px 40px;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 16px;
-            font-weight: 700;
-            letter-spacing: 2px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 40px;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
-        }
-
-        button#uploadBtn:hover:not(:disabled) {
-            background: var(--neon-cyan);
-            color: #000;
-            box-shadow: 0 0 30px var(--neon-cyan);
-        }
-
-        button#uploadBtn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            border-color: #555;
-            color: #555;
-            box-shadow: none;
-        }
-
-        /* Result Area */
-        #result {
-            margin-top: 40px;
-            border: 1px solid rgba(0, 243, 255, 0.1);
-            background: rgba(5, 10, 20, 0.8);
-            border-radius: 8px;
-            padding: 2px;
-            /* For border gradient effect simulated via inner container if needed */
-            min-height: 100px;
-            display: none;
-            /* Hidden by default */
-            animation: fadeIn 0.5s ease-out;
-        }
-
-        #result.visible {
-            display: block;
-        }
-
-        /* Processing Animation */
-        .processing-overlay {
-            display: none;
-            margin-top: 30px;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-        }
-
-        .scanner-line {
-            height: 4px;
-            width: 0%;
-            background: var(--neon-cyan);
-            box-shadow: 0 0 10px var(--neon-cyan);
-            transition: width 0.1s;
-            margin-bottom: 10px;
-            border-radius: 2px;
-        }
-
-        .processing-text {
-            font-family: 'Rajdhani', sans-serif;
-            color: var(--neon-cyan);
-            letter-spacing: 2px;
-            animation: blink 1s infinite;
-        }
-
-        @keyframes blink {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
-        }
-
-        /* --- NEURAL CORE LOADING ANIMATION --- */
-        .neural-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .neural-core {
-            position: relative;
-            width: 120px;
-            height: 120px;
-            margin-bottom: 30px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .core-center {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            background: var(--neon-cyan);
-            border-radius: 50%;
-            box-shadow: 0 0 30px var(--neon-cyan), inset 0 0 20px #fff;
-            animation: pulse-core 2s infinite ease-in-out;
-            z-index: 10;
-        }
-
-        .core-ring {
-            position: absolute;
-            border-radius: 50%;
-            border: 2px solid transparent;
-            box-sizing: border-box;
-        }
-
-        .ring-1 {
-            width: 100%;
-            height: 100%;
-            border-top: 2px solid var(--neon-violet);
-            border-right: 2px solid var(--neon-violet);
-            animation: spin-right 3s linear infinite;
-        }
-
-        .ring-2 {
-            width: 80%;
-            height: 80%;
-            border-bottom: 2px solid var(--neon-cyan);
-            border-left: 2px solid var(--neon-cyan);
-            animation: spin-left 2s linear infinite;
-        }
-
-        .ring-3 {
-            width: 60%;
-            height: 60%;
-            border-top: 2px solid #fff;
-            animation: spin-right 4s linear infinite;
-        }
-
-        .ai-status-container {
-            text-align: center;
-            min-height: 60px;
-            max-width: 400px;
-        }
-
-        .ai-status-title {
-            font-family: 'Orbitron', sans-serif;
-            color: var(--neon-cyan);
-            font-size: 14px;
-            letter-spacing: 2px;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            opacity: 0.8;
-        }
-
-        .ai-status-text {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 20px;
-            color: #fff;
-            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
-            min-height: 24px;
-        }
-
-        @keyframes pulse-core {
-            0% {
-                transform: scale(0.95);
-                opacity: 0.8;
-            }
-
-            50% {
-                transform: scale(1.1);
-                opacity: 1;
-                box-shadow: 0 0 50px var(--neon-cyan);
-            }
-
-            100% {
-                transform: scale(0.95);
-                opacity: 0.8;
-            }
-        }
-
-        @keyframes spin-right {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        @keyframes spin-left {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(-360deg);
-            }
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Utility to style injected HTML content slightly better */
-        #result-content {
-            padding: 30px;
-            color: #000000;
-            /* Black text as requested */
-            font-family: 'Inter', sans-serif;
-            overflow-x: auto;
-            line-height: 1.6;
-            background-color: #ffffff;
-            /* White background for black text */
-            border-radius: 4px;
-        }
-
-        /* Force black for any injected text elements */
-        #result-content p,
-        #result-content li,
-        #result-content span,
-        #result-content div {
-            color: #000000;
-        }
-
-        #result-content h1,
-        #result-content h2,
-        #result-content h3,
-        #result-content h4 {
-            color: #000;
-            /* Black headers */
-            font-family: 'Orbitron', sans-serif;
-            margin-top: 20px;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 5px;
-        }
-
-        #result-content a {
-            color: #0056b3;
-            /* Standard blue link for white bg */
-            text-decoration: none;
-            border-bottom: 1px dotted #0056b3;
-            transition: all 0.2s;
-        }
-
-        #result-content a:hover {
-            color: #003d82;
-        }
-
-        #result-content table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            margin-bottom: 15px;
-            background: #fff;
-            border: 1px solid #ccc;
-        }
-
-        #result-content th,
-        #result-content td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-            color: #333;
-        }
-
-        #result-content th {
-            background: #f4f4f4;
-            color: #000;
-            font-weight: 700;
-            text-transform: uppercase;
-            font-size: 0.9em;
-        }
-
-        #result-content tr:nth-child(even) {
-            background: #f9f9f9;
-        }
-
-        #result-content tr:hover {
-            background: #f1f1f1;
-        }
-
-        #result-content code,
-        #result-content pre {
-            background: #f4f4f4;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-family: monospace;
-            color: #d63384;
-            border: 1px solid #ddd;
-        }
-
-        #result-content pre {
-            padding: 15px;
-            overflow-x: auto;
-            color: #333;
-        }
-
-        /* Force brightness for any injected text elements */
-        #result-content p,
-        #result-content li,
-        #result-content span,
-        #result-content div {
-            color: #e0e0e0;
-        }
-
-        #result-content h1,
-        #result-content h2,
-        #result-content h3,
-        #result-content h4 {
-            color: var(--neon-cyan);
-            font-family: 'Orbitron', sans-serif;
-            margin-top: 20px;
-            margin-bottom: 10px;
-        }
-
-        #result-content a {
-            color: var(--neon-violet);
-            text-decoration: none;
-            border-bottom: 1px dotted var(--neon-violet);
-            transition: all 0.2s;
-        }
-
-        #result-content a:hover {
-            color: #fff;
-            text-shadow: 0 0 5px var(--neon-violet);
-        }
-
-        #result-content table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            margin-bottom: 15px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        #result-content th,
-        #result-content td {
-            border: 1px solid rgba(0, 243, 255, 0.2);
-            padding: 12px;
-            text-align: left;
-        }
-
-        #result-content th {
-            background: rgba(0, 243, 255, 0.15);
-            color: var(--neon-cyan);
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.9em;
+            font-size: 10px;
             letter-spacing: 1px;
         }
 
-        #result-content tr:nth-child(even) {
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        #result-content tr:hover {
-            background: rgba(0, 243, 255, 0.05);
-        }
-
-        #result-content code,
-        #result-content pre {
-            background: rgba(0, 0, 0, 0.5);
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-family: monospace;
-            color: #fff;
-            border: 1px solid rgba(0, 243, 255, 0.3);
-        }
-
-        #result-content pre {
-            padding: 15px;
-            overflow-x: auto;
-        }
-
-        #result-content table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        #result-content th,
-        #result-content td {
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 8px;
-            text-align: left;
-        }
-
-        #result-content th {
-            background: rgba(0, 243, 255, 0.1);
-            color: var(--neon-cyan);
-        }
-
-        /* Split View Layout */
-        .split-container {
-            display: none;
-            /* Hidden initially */
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-            height: 80vh;
-            width: 100%;
-            margin-top: 40px;
-        }
-
-        .split-container.visible {
-            display: grid;
-        }
-
-        /* Left Pane - IFrame */
-        .report-frame {
-            width: 100%;
-            height: 100%;
-            border: 1px solid rgba(0, 243, 255, 0.2);
-            background: #fff;
-            border-radius: 8px;
-        }
-
-        /* Right Pane - Insights & Chat */
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            height: 100%;
-        }
-
-        .insights-panel {
+        .insights-wrapper {
             flex: 1;
-            background: var(--panel-bg);
-            border: 1px solid rgba(0, 243, 255, 0.1);
-            border-radius: 8px;
             padding: 20px;
             overflow-y: auto;
-            backdrop-filter: blur(10px);
         }
 
-        .insights-panel h2 {
+        .insights-title {
             font-family: 'Orbitron', sans-serif;
-            color: var(--neon-cyan);
-            font-size: 18px;
-            margin-top: 0;
+            color: var(--neon-violet);
+            font-size: 14px;
             margin-bottom: 20px;
-            border-bottom: 1px solid rgba(0, 243, 255, 0.2);
-            padding-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .insight-item {
             background: rgba(0, 243, 255, 0.05);
             border: 1px solid rgba(0, 243, 255, 0.1);
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 6px;
             transition: all 0.2s;
         }
 
@@ -678,7 +125,7 @@
         .insight-text {
             font-family: 'Rajdhani', sans-serif;
             color: #e0e0e0;
-            font-size: 16px;
+            font-size: 14px;
             margin-bottom: 10px;
             line-height: 1.4;
         }
@@ -687,12 +134,13 @@
             background: transparent;
             color: var(--neon-cyan);
             border: 1px solid var(--neon-cyan);
-            padding: 5px 15px;
+            padding: 4px 10px;
             font-family: 'Orbitron', sans-serif;
-            font-size: 10px;
+            font-size: 9px;
             cursor: pointer;
             transition: all 0.2s;
             text-transform: uppercase;
+            border-radius: 3px;
         }
 
         .insight-btn:hover {
@@ -700,168 +148,424 @@
             color: #000;
         }
 
-        /* Chat UI */
-        .chat-panel {
-            height: 250px;
-            background: var(--panel-bg);
-            border: 1px solid rgba(189, 0, 255, 0.3);
-            border-radius: 8px;
+        /* Main Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+        }
+
+        /* Report Pane */
+        .report-pane {
+            flex: 1;
+            position: relative;
+            background: rgba(0, 0, 0, 0.3);
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+        }
+
+        .welcome-screen {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            pointer-events: none;
+            z-index: 1;
+            transition: opacity 0.5s;
+        }
+
+        .welcome-screen h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 32px;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #fff, var(--neon-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .welcome-screen p {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 18px;
+            color: #8892b0;
+        }
+
+        #reportFrame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            z-index: 2;
+            background: transparent;
+        }
+        
+        #reportFrame.has-bg {
+            background: #fff; /* When actual report is loaded, give it white bg so content is legible */
+        }
+
+        /* Chat Pane */
+        .chat-pane {
+            width: 400px;
+            min-width: 350px;
+            border-left: 1px solid rgba(189, 0, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
             backdrop-filter: blur(10px);
+            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
         }
 
         .chat-header {
-            background: rgba(189, 0, 255, 0.1);
-            padding: 10px 15px;
-            font-family: 'Orbitron', sans-serif;
-            color: var(--neon-violet);
-            font-size: 12px;
+            padding: 15px 20px;
             border-bottom: 1px solid rgba(189, 0, 255, 0.2);
-        }
-
-        .chat-messages {
-            flex-grow: 1;
-            padding: 15px;
-            overflow-y: auto;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Orbitron', sans-serif;
+            color: #fff;
             font-size: 14px;
-            color: #ccc;
-        }
-
-        .chat-input-area {
-            padding: 10px;
-            border-top: 1px solid rgba(189, 0, 255, 0.2);
             display: flex;
+            align-items: center;
             gap: 10px;
         }
 
-        .chat-input {
-            flex-grow: 1;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(189, 0, 255, 0.3);
+        .chat-header::before {
+            content: '💬';
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            font-size: 14px;
+        }
+
+        .msg-container {
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+        }
+
+        .msg-container.user {
+            align-self: flex-end;
+        }
+
+        .msg-container.ai {
+            align-self: flex-start;
+        }
+
+        .msg-bubble {
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .msg-container.user .msg-bubble {
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            border-bottom-right-radius: 2px;
             color: #fff;
+        }
+
+        .msg-container.ai .msg-bubble {
+            background: rgba(189, 0, 255, 0.1);
+            border: 1px solid rgba(189, 0, 255, 0.3);
+            border-bottom-left-radius: 2px;
+            color: #e0e0e0;
+        }
+
+        .msg-sender {
+            font-size: 11px;
+            color: #8892b0;
+            margin-bottom: 4px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .chat-input-area {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-top: 1px solid rgba(0, 243, 255, 0.2);
+        }
+
+        .file-indicator {
+            display: none;
+            align-items: center;
+            background: rgba(189, 0, 255, 0.15);
+            border: 1px solid var(--neon-violet);
+            border-radius: 6px;
             padding: 8px 12px;
-            border-radius: 4px;
-            font-family: 'Inter', sans-serif;
+            margin-bottom: 12px;
+            font-size: 12px;
+            color: #fff;
+            gap: 10px;
+        }
+
+        .file-indicator span {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .remove-file {
+            background: none;
+            border: none;
+            color: #ff2a6d;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            background: rgba(10, 20, 30, 0.8);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            border-radius: 24px;
+            padding: 5px 15px;
+            transition: all 0.3s;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+        }
+
+        .attach-btn {
+            color: currentcolor;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+            margin-right: 10px;
+        }
+        
+        .attach-btn svg {
+            width: 20px; height: 20px; stroke: #8892b0; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+            transition: stroke 0.2s;
+        }
+
+        .attach-btn:hover svg {
+            stroke: var(--neon-cyan);
+        }
+
+        .chat-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #fff;
+            padding: 12px 0;
             outline: none;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
         }
 
-        .chat-input:focus {
-            border-color: var(--neon-violet);
+        .chat-input::placeholder {
+            color: #8892b0;
         }
 
-        .chat-send-btn {
+        .send-btn {
             background: var(--neon-violet);
             color: #fff;
             border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .send-btn svg {
+            width: 16px; height: 16px; fill: #fff; transform: translateX(1px);
         }
 
-        .chat-send-btn:hover {
-            box-shadow: 0 0 10px var(--neon-violet);
+        .send-btn:hover:not(:disabled) {
+            box-shadow: 0 0 15px var(--neon-violet);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #555;
+        }
+
+        /* Loading Indicator */
+        .typing-indicator {
+            display: none;
+            flex-direction: row;
+            gap: 5px;
+            padding: 10px;
+        }
+        
+        .typing-dot {
+            width: 6px; height: 6px; background: var(--neon-cyan); border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0, 243, 255, 0.3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 243, 255, 0.6); }
+
+        /* Light Theme */
+        body.light-theme {
+            --neon-cyan: #0077b6;
+            --neon-violet: #7209b7;
+            --bg-dark: #f0f2f5;
+            --panel-bg: rgba(255, 255, 255, 0.9);
+            color: #333;
+            background-image: none;
+            background-color: var(--bg-dark);
+        }
+        body.light-theme .sidebar { background: rgba(255, 255, 255, 0.95); border-right: 1px solid #ddd; }
+        body.light-theme .chat-pane { background: rgba(255, 255, 255, 0.95); border-left: 1px solid #ddd; box-shadow: -5px 0 15px rgba(0,0,0,0.05); }
+        body.light-theme .chat-header { color: #333; border-bottom: 1px solid #eee; }
+        body.light-theme .chat-input-area { background: #fafafa; border-top: 1px solid #eee; }
+        body.light-theme .input-wrapper { background: #fff; border: 1px solid #ccc; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05); }
+        body.light-theme .chat-input { color: #333; }
+        body.light-theme .chat-input::placeholder { color: #999; }
+        body.light-theme .msg-container.user .msg-bubble { background: #e3f2fd; color: #01579b; border: 1px solid #bbdefb; }
+        body.light-theme .msg-container.ai .msg-bubble { background: #f3e5f5; color: #4a148c; border: 1px solid #e1bee7; }
+        body.light-theme .msg-sender { color: #666; }
+        body.light-theme .insight-item { background: #fff; border: 1px solid #eee; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        body.light-theme .insight-text { color: #444; }
+        body.light-theme .logo { color: #0077b6; text-shadow: none; }
+        body.light-theme .logo::before { background: #0077b6; box-shadow: none; }
+        body.light-theme .status-badge { color: #0077b6; border-color: #0077b6; }
+        body.light-theme .welcome-screen h1 { background: linear-gradient(to right, #333, #0077b6); -webkit-background-clip: text; text-shadow: none; }
+        body.light-theme .welcome-screen p { color: #666; }
+        body.light-theme .file-indicator { background: #f3e5f5; border-color: #ce93d8; color: #333; }
+        body.light-theme #matrix-bg { opacity: 0.05; filter: invert(1); }
+        
+        .theme-toggle {
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .theme-toggle:hover {
+            background: var(--neon-cyan);
+            color: #000;
+        }
+        body.light-theme .theme-toggle {
+            background: transparent;
+            border-color: #0077b6;
+            color: #0077b6;
+        }
+        body.light-theme .theme-toggle:hover {
+            background: #0077b6;
+            color: #fff;
         }
     </style>
 </head>
-
 <body>
 
     <canvas id="matrix-bg"></canvas>
 
-    <div class="container">
-        <header>
-            <div class="logo">Ciel Mobility AI Core <span style="font-weight:300; color:#fff;">// Analytics</span></div>
-            <div class="status-badge">SYSTEM ONLINE</div>
-        </header>
-
-        <div class="dashboard-grid">
-            <div class="upload-panel">
-                <h1>Logistics Data Uplink</h1>
-                <p>Initiate secure transfer for AI-enhanced supply chain analysis</p>
-
-                <label for="fileInput" class="file-drop-area">
-                    <span class="upload-icon">⬢</span>
-                    <span class="file-name" id="fileName">Select Data Source (.xlsx, .csv)</span>
-                </label>
-                <input type="file" id="fileInput" accept=".xlsx, .xls, .csv">
-
-                <button id="uploadBtn" disabled>Initialize Analysis</button>
-
-                <div class="processing-overlay" id="processingOverlay">
-                    <div class="neural-wrapper">
-                        <div class="neural-core">
-                            <div class="core-center"></div>
-                            <div class="core-ring ring-1"></div>
-                            <div class="core-ring ring-2"></div>
-                            <div class="core-ring ring-3"></div>
-                        </div>
-                        <div class="ai-status-container">
-                            <div class="ai-status-title">AI Processing Unit</div>
-                            <div class="ai-status-text" id="aiStatusText">Initializing Connection...</div>
-                        </div>
-                    </div>
-                </div>
+    <aside class="sidebar">
+        <div class="logo-container" style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <div class="logo">Ciel Mobility AI</div>
+                <div class="status-badge">SYSTEM ONLINE</div>
             </div>
-
-            <!-- Split View Container -->
-            <div id="splitContainer" class="split-container">
-                <!-- Left: HTML Report -->
-                <iframe id="reportFrame" class="report-frame" sandbox="allow-scripts allow-same-origin"></iframe>
-
-                <!-- Right: Insights & Chat -->
-                <div class="sidebar">
-                    <!-- Top: Insights -->
-                    <div class="insights-panel">
-                        <h2>Strategic Insights</h2>
-                        <div id="insightsList">
-                            <!-- Insights will be injected here -->
-                        </div>
-                    </div>
-
-                    <!-- Bottom: Chat -->
-                    <div class="chat-panel">
-                        <div class="chat-header">AI Analyst Chat</div>
-                        <div class="chat-messages" id="chatMessages">
-                            <div style="opacity: 0.7; margin-bottom: 10px;">System: Ready for queries.</div>
-                        </div>
-                        <div class="chat-input-area">
-                            <input type="text" class="chat-input" placeholder="Ask about the report..." id="chatInput">
-                            <button class="chat-send-btn" id="chatSendBtn">SEND</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="result" class="">
-                <div id="result-content"></div>
+            <button id="themeToggle" class="theme-toggle" title="Toggle Theme">
+                <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+        <div class="insights-wrapper">
+            <div class="insights-title">Strategic Insights</div>
+            <div id="insightsList">
+                <div class="insight-text" style="color: #8892b0; font-size: 13px;">No insights generated yet. Upload data to begin analysis.</div>
             </div>
         </div>
-    </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="report-pane">
+            <div class="welcome-screen" id="welcomeScreen">
+                <h1>Logistics AI Core</h1>
+                <p>Attach a dataset or type a query to deploy agents.</p>
+            </div>
+            <iframe id="reportFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+        </div>
+
+        <div class="chat-pane">
+            <div class="chat-header">Analysis Chat</div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="msg-container ai">
+                    <div class="msg-sender">System</div>
+                    <div class="msg-bubble">Agent connection established. Awaiting dataset or command.</div>
+                </div>
+            </div>
+            
+            <!-- Typing / Processing indicator -->
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="msg-sender" style="margin-right: 10px;">Ciel AI processing</div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="file-indicator" id="fileIndicator">
+                    📎 <span id="fileName">dataset.xlsx</span>
+                    <button class="remove-file" id="removeFile">&times;</button>
+                </div>
+                
+                <div class="input-wrapper">
+                    <label for="fileInput" class="attach-btn" title="Attach file">
+                        <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                    </label>
+                    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" style="display: none;">
+                    
+                    <input type="text" id="chatInput" class="chat-input" placeholder="Message or upload data..." autocomplete="off">
+                    
+                    <button class="send-btn" id="sendBtn" disabled>
+                        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
 
     <script>
-        // Matrix Rain Effect
+        // Matrix Background
         const canvas = document.getElementById('matrix-bg');
         const ctx = canvas.getContext('2d');
-
         let width = canvas.width = window.innerWidth;
         let height = canvas.height = window.innerHeight;
-
-        // Matrix characters
         const cols = Math.floor(width / 20) + 1;
         const ypos = Array(cols).fill(0);
 
         function matrix() {
             ctx.fillStyle = 'rgba(5, 10, 20, 0.05)';
             ctx.fillRect(0, 0, width, height);
-
             ctx.fillStyle = '#0f0';
             ctx.font = '15px monospace';
-
             ypos.forEach((y, ind) => {
                 const text = String.fromCharCode(Math.random() * 128);
                 const x = ind * 20;
@@ -870,232 +574,222 @@
                 else ypos[ind] = y + 20;
             });
         }
-
         setInterval(matrix, 50);
+        window.addEventListener('resize', () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; });
 
-        window.addEventListener('resize', () => {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
-        });
-
-        // File Upload Logic
+        // UI Elements
         const fileInput = document.getElementById('fileInput');
-        const fileNameSpan = document.getElementById('fileName');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const processingOverlay = document.getElementById('processingOverlay');
-        // const progressBar = document.getElementById('progressBar'); // Removed old progress bar
-        const aiStatusText = document.getElementById('aiStatusText');
-        const resultDiv = document.getElementById('result');
-        const resultContent = document.getElementById('result-content');
-
-        fileInput.addEventListener('change', function () {
-            if (this.files && this.files.length > 0) {
-                fileNameSpan.textContent = this.files[0].name;
-                fileNameSpan.style.color = 'var(--neon-cyan)';
-                uploadBtn.disabled = false;
-                uploadBtn.innerHTML = 'Initialize Analysis';
-            } else {
-                fileNameSpan.textContent = 'Select Data Source (.xlsx)';
-                fileNameSpan.style.color = '#fff';
-                uploadBtn.disabled = true;
-            }
-        });
-
-        uploadBtn.addEventListener('click', async () => {
-            if (!fileInput.files.length) return;
-
-            const file = fileInput.files[0];
-            const formData = new FormData();
-            formData.append('file', file);
-
-            // UI updates
-            uploadBtn.disabled = true;
-            uploadBtn.style.display = 'none';
-            processingOverlay.style.display = 'flex';
-            resultDiv.classList.remove('visible');
-            resultContent.innerHTML = '';
-
-            // AI Status Message Cycle
-            const aiMessages = [
-                "Ingesting and parsing logistics dataset...",
-                "Validating data integrity with checksum algorithms...",
-                "Mapping global supply chain nodes...",
-                "Identifying potential bottlenecks in regional distribution...",
-                "Consulting with Logistics Strategy AI Agent...",
-                "Debating route optimization with Tariff Expert Agent...",
-                "Analyzing fuel consumption patterns against historical baselines...",
-                "Simulating 10,000 delivery scenarios using Monte Carlo methods...",
-                "Detecting anomaly patterns in last-mile delivery vectors...",
-                "Re-evaluating risk factors with Weather Prediction Module...",
-                "Synthesizing multi-agent consensus for final report...",
-                "Generating actionable insights and efficiency recommendations..."
-            ];
-
-            let messageIndex = 0;
-            aiStatusText.textContent = aiMessages[0];
-
-            const statusInterval = setInterval(() => {
-                if (messageIndex < aiMessages.length - 1) {
-                    messageIndex++;
-                    aiStatusText.style.opacity = 0;
-                    setTimeout(() => {
-                        aiStatusText.textContent = aiMessages[messageIndex];
-                        aiStatusText.style.opacity = 1;
-                    }, 500);
-                } else {
-                    clearInterval(statusInterval); // Stop cycling, keep last message
-                }
-            }, 12000); // Change message every 12 seconds
-
-            try {
-                const response = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                clearInterval(statusInterval);
-                aiStatusText.textContent = "Analysis Complete.";
-
-                if (!response.ok) {
-                    throw new Error(`System Error: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-
-                // Artificial delay to show 100% completion
-                setTimeout(() => {
-                    processingOverlay.style.display = 'none';
-                    uploadBtn.style.display = 'inline-block';
-                    uploadBtn.innerHTML = 'Upload New Dataset';
-                    uploadBtn.disabled = false;
-
-                    // Hide old result div if visible
-                    resultDiv.classList.remove('visible');
-
-                    // Show Split View
-                    const splitContainer = document.getElementById('splitContainer');
-                    splitContainer.classList.add('visible');
-
-                    // 1. Render HTML Report in IFrame
-                    const iframe = document.getElementById('reportFrame');
-                    // Use srcdoc to render the HTML safely
-                    iframe.srcdoc = data.output || '<h1>No Report Generated</h1>';
-
-                    // 2. Render Insights
-                    const insightsList = document.getElementById('insightsList');
-                    insightsList.innerHTML = ''; // Clear previous
-
-                    if (data.insights && Array.isArray(data.insights)) {
-                        data.insights.forEach(insight => {
-                            const div = document.createElement('div');
-                            div.className = 'insight-item';
-                            div.innerHTML = `
-                                <div class="insight-text">${insight}</div>
-                                <button class="insight-btn" onclick="verifyInsight('${insight.replace(/'/g, "\\'")}')">Verify Insight</button>
-                            `;
-                            insightsList.appendChild(div);
-                        });
-                    } else {
-                        insightsList.innerHTML = '<div class="insight-item"><div class="insight-text">No specific insights generated.</div></div>';
-                    }
-
-                }, 500);
-
-            } catch (error) {
-                clearInterval(statusInterval);
-                console.error('Error:', error);
-                processingOverlay.style.display = 'none';
-                uploadBtn.disabled = false;
-                uploadBtn.style.display = 'inline-block';
-                // Show error in the original page context
-                resultDiv.classList.add('visible');
-                resultContent.innerHTML = `<p style="color: var(--danger);">System Failure: ${error.message}</p>`;
-            }
-        });
-
-        // Chat & Interaction Logic
+        const fileIndicator = document.getElementById('fileIndicator');
+        const fileName = document.getElementById('fileName');
+        const removeFile = document.getElementById('removeFile');
         const chatInput = document.getElementById('chatInput');
-        const chatSendBtn = document.getElementById('chatSendBtn');
+        const sendBtn = document.getElementById('sendBtn');
         const chatMessages = document.getElementById('chatMessages');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const reportFrame = document.getElementById('reportFrame');
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const insightsList = document.getElementById('insightsList');
 
-        function addMessage(sender, text) {
-            const div = document.createElement('div');
-            div.style.marginBottom = '10px';
-            div.style.lineHeight = '1.4';
-            div.innerHTML = `<strong style="color: ${sender === 'User' ? 'var(--neon-cyan)' : 'var(--neon-violet)'}">${sender}:</strong> ${text}`;
-            chatMessages.appendChild(div);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+        // Handlers
+        function updateSendButtonState() {
+            if (chatInput.value.trim() || fileInput.files.length > 0) {
+                sendBtn.disabled = false;
+            } else {
+                sendBtn.disabled = true;
+            }
         }
 
-        async function handleInteraction(message) {
-            addMessage('User', message);
-            chatInput.value = '';
+        chatInput.addEventListener('input', updateSendButtonState);
 
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                fileName.textContent = fileInput.files[0].name;
+                fileIndicator.style.display = 'flex';
+                updateSendButtonState();
+            }
+        });
+
+        removeFile.addEventListener('click', () => {
+            fileInput.value = '';
+            fileIndicator.style.display = 'none';
+            updateSendButtonState();
+        });
+
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSend();
+        });
+
+        sendBtn.addEventListener('click', handleSend);
+
+        function addMessage(role, text) {
+            const container = document.createElement('div');
+            container.className = `msg-container ${role === 'user' ? 'user' : 'ai'}`;
+            
+            const sender = document.createElement('div');
+            sender.className = 'msg-sender';
+            sender.textContent = role === 'user' ? 'You' : 'Ciel AI';
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'msg-bubble';
+            // Allow basic HTML in AI messages mainly for quick formats, but usually text
+            bubble.innerHTML = text;
+            
+            container.appendChild(sender);
+            container.appendChild(bubble);
+            chatMessages.appendChild(container);
+            
+            // Scroll to bottom
+            setTimeout(() => chatMessages.scrollTop = chatMessages.scrollHeight, 50);
+        }
+
+        async function handleSend() {
+            const text = chatInput.value.trim();
+            const hasFile = fileInput.files.length > 0;
+
+            if (!text && !hasFile) return;
+
+            // UI Feedback
+            if (hasFile) {
+                const file = fileInput.files[0];
+                addMessage('user', `📎 Attached dataset: <b>${file.name}</b><br/>${text}`);
+                
+                // Clear inputs
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                fileInput.value = '';
+                fileIndicator.style.display = 'none';
+                chatInput.value = '';
+                updateSendButtonState();
+                
+                await processUpload(formData, file.name);
+            } else {
+                addMessage('user', text);
+                chatInput.value = '';
+                updateSendButtonState();
+                
+                await processInteraction(text);
+            }
+        }
+
+        function setProcessing(isProcessing) {
+            typingIndicator.style.display = isProcessing ? 'flex' : 'none';
+            chatInput.disabled = isProcessing;
+            fileInput.disabled = isProcessing;
+            if(isProcessing) {
+                sendBtn.disabled = true;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        function updateReportAndInsights(data) {
+            welcomeScreen.style.opacity = '0';
+            
+            if (data.output) {
+                reportFrame.classList.add('has-bg');
+                reportFrame.srcdoc = data.output;
+            }
+
+            if (data.insights && Array.isArray(data.insights)) {
+                insightsList.innerHTML = ''; // Clear previous
+                data.insights.forEach(insight => {
+                    const div = document.createElement('div');
+                    div.className = 'insight-item';
+                    div.innerHTML = `
+                        <div class="insight-text">${insight}</div>
+                        <button class="insight-btn" onclick="verifyInsight('${insight.replace(/'/g, "\\'")}')">Analyze</button>
+                    `;
+                    insightsList.appendChild(div);
+                });
+            }
+        }
+
+        async function processUpload(formData, fileName) {
+            setProcessing(true);
+            try {
+                const aiMessages = [
+                    "Ingesting logistics dataset...",
+                    "Validating data integrity...",
+                    "Simulating delivery scenarios..."
+                ];
+                let msgIndex = 0;
+                
+                const response = await fetch('/upload', { method: 'POST', body: formData });
+                if (!response.ok) throw new Error(`Server returned ${response.status}`);
+                
+                const data = await response.json();
+                
+                updateReportAndInsights(data);
+                addMessage('ai', `Analysis complete for <b>${fileName}</b>. Report has been generated to the left dashboard.`);
+                
+            } catch (err) {
+                console.error(err);
+                addMessage('ai', `System Error: Failed to process dataset. ${err.message}`);
+            } finally {
+                setProcessing(false);
+            }
+        }
+
+        async function processInteraction(text) {
+            setProcessing(true);
             try {
                 const response = await fetch('/interact', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message })
+                    body: JSON.stringify({ message: text })
                 });
-
-                if (!response.ok) throw new Error('Network response was not ok');
-
+                
+                if (!response.ok) throw new Error(`Server returned ${response.status}`);
                 const data = await response.json();
-
-                // Assuming N8n returns { output: "response text" } or similar
-                // Adjust based on actual N8n response structure
-
-                // 1. Update HTML Report
-                if (data.output) {
-                    const iframe = document.getElementById('reportFrame');
-                    iframe.srcdoc = data.output;
+                
+                if (data.output || data.insights) {
+                    updateReportAndInsights(data);
                 }
-
-                // 2. Update Insights List
-                const insightsList = document.getElementById('insightsList');
-                if (data.insights && Array.isArray(data.insights)) {
-                    insightsList.innerHTML = ''; // Clear previous
-                    data.insights.forEach(insight => {
-                        const div = document.createElement('div');
-                        div.className = 'insight-item';
-                        div.innerHTML = `
-                            <div class="insight-text">${insight}</div>
-                            <button class="insight-btn" onclick="verifyInsight('${insight.replace(/'/g, "\\'")}')">Verify Insight</button>
-                        `;
-                        insightsList.appendChild(div);
-                    });
-                }
-
-                // 3. Chat Confirmation
-                let aiResponse = "Analysis complete. Dashboard updated.";
+                
+                let aiResponse = "Dashboard updated with your query.";
                 if (data.text) aiResponse = data.text;
+                else if (typeof data === 'string') aiResponse = data;
+                
+                addMessage('ai', aiResponse);
 
-                addMessage('AI', aiResponse);
-
-            } catch (error) {
-                console.error('Interaction Failed:', error);
-                addMessage('System', 'Error communicating with AI agent.');
+            } catch (err) {
+                console.error(err);
+                addMessage('ai', `System Error: Failed to connect to AI Agent. ${err.message}`);
+            } finally {
+                setProcessing(false);
             }
         }
 
-        // Expose function for inline onclick handler
-        window.verifyInsight = function (insightText) {
-            handleInteraction("Verify: " + insightText);
+        // Global function for UI onclick
+        window.verifyInsight = function(text) {
+            chatInput.value = `Elaborate on: "${text}"`;
+            updateSendButtonState();
+            chatInput.focus();
         };
 
-        chatSendBtn.addEventListener('click', () => {
-            const text = chatInput.value.trim();
-            if (text) handleInteraction(text);
-        });
-
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const text = chatInput.value.trim();
-                if (text) handleInteraction(text);
+        // Theme Toggle Logic
+        const themeToggle = document.getElementById('themeToggle');
+        
+        function setTheme(isLight) {
+            if (isLight) {
+                document.body.classList.add('light-theme');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.body.classList.remove('light-theme');
+                localStorage.setItem('theme', 'dark');
             }
+        }
+        
+        // Retrieve saved theme or default to dark
+        if (localStorage.getItem('theme') === 'light') {
+            setTheme(true);
+        }
+        
+        themeToggle.addEventListener('click', () => {
+            const isLight = document.body.classList.contains('light-theme');
+            setTheme(!isLight);
         });
+
     </script>
-
 </body>
-
 </html>
