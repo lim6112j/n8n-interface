@@ -4,8 +4,6 @@ const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
-const http = require('http');
-const https = require('https');
 
 const app = express();
 const port = 3000;
@@ -13,16 +11,7 @@ const port = 3000;
 // Configure multer for file uploads
 const upload = multer({ dest: 'uploads/' });
 
-// Create agents for HTTP/1.1 support (n8n webhook requires HTTP/1.1, not HTTP/2)
-const httpAgent = new http.Agent({ keepAlive: true });
-const httpsAgent = new https.Agent({ 
-    keepAlive: true,
-    maxSockets: 10,
-    rejectUnauthorized: false,
-    // Force HTTP/1.1 to avoid PROTOCOL_ERROR with ngrok
-    maxVersion: 'TLSv1.2'
-});
-
+// Serve static files from the public directory
 // Serve static files from the public directory
 app.use(express.static('public'));
 app.use(express.json()); // Parse JSON bodies for chat interaction
@@ -46,25 +35,69 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             contentType: contentType // Dynamic content type
         });
 
+        // The test webhook URL provided by the user
+        //const webhookUrl = 'https://draven-reparative-subfestively.ngrok-free.dev/webhook-test/10df9f3d-ca2d-4a30-9d49-472866901991';
+
         // production 
         // const webhookUrl = 'https://draven-reparative-subfestively.ngrok-free.dev/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
-	const webhookUrl = 'http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
+        const webhookUrl = 'http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
+	// Headers for the request to the webhook
+        // form-data library handles the boundary automatically
+        const headers = {
+            ...formData.getHeaders(),
+            'Content-Type': contentType // Dynamic content type
+        };
+
+        const https = require('https');
+
         const fileBuffer = fs.readFileSync(filePath);
 
         // Increase timeout to 15 minutes (900000 ms) as requested
         const TIMEOUT_MS = 900000;
 
+        const httpsAgent = new https.Agent({
+            keepAlive: true,
+            maxSockets: 10,
+            rejectUnauthorized: false // Allow self-signed certs if needed for ngrok/dev
+        });
+
         const response = await axios.post(webhookUrl, fileBuffer, {
             headers: {
                 'Content-Type': contentType
             },
-            timeout: TIMEOUT_MS,
-            httpAgent: httpAgent,
+            timeout: TIMEOUT_MS, // Set explicit timeout for axios
             httpsAgent: httpsAgent,
             maxBodyLength: Infinity,
-            maxContentLength: Infinity,
-            maxRedirects: 5
+            maxContentLength: Infinity
         });
+
+        /*
+        // MOCK RESPONSE FOR TESTING
+        const response = {
+            data: {
+                output: {
+                    output: `
+                        <!DOCTYPE html>
+                        <html>
+                        <head><style>body { font-family: sans-serif; padding: 20px; }</style></head>
+                        <body>
+                            <h1>Analysis Report</h1>
+                            <p>This is a mock report generated for testing purposes.</p>
+                            <div style="height: 300px; background: #eee; margin-top: 20px; display: flex; align-items: center; justify-content: center;">
+                                Chart Placeholder
+                            </div>
+                        </body>
+                        </html>
+                    `,
+                    insights: [
+                        "Supply chain velocity increased by 15%",
+                        "Potential bottleneck identified in Sector 7",
+                        "Weather patterns may affect delivery times"
+                    ]
+                }
+            }
+        };
+        */
 
         // Check the type of response data
         let result = response.data;
@@ -84,7 +117,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         res.json(result);
 
     } catch (error) {
-        console.error('Error forwarding file:', error.message);
+        console.error('Error forwarding file:', error);
         res.status(500).json({ error: 'Failed to forward file to webhook', details: error.message });
     } finally {
         // Clean up the uploaded file from local storage
@@ -97,15 +130,24 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 // Chat / Interaction Endpoint
 app.post('/interact', async (req, res) => {
     const { message } = req.body;
-    // const interactionWebhookUrl = 'https://draven-reparative-subfestively.ngrok-free.dev/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
-    const interactionWebhookUrl = 'http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
+    // New Webhook URL for interactions
+    //const interactionWebhookUrl = 'https://draven-reparative-subfestively.ngrok-free.dev/webhook-test/63b5b0bd-1d44-481a-8e3a-9fced8e717eb';
+    // production
+    //const interactionWebhookUrl = 'https://draven-reparative-subfestively.ngrok-free.dev/webhook/63b5b0bd-1d44-481a-8e3a-9fced8e717eb';
+    // upload
+    //const interactionWebhookUrl = 'https://draven-reparative-subfestively.ngrok-free.dev/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
+    const interactionWebhookUrl ='http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991'; ;
     try {
+        const https = require('https');
+        const httpsAgent = new https.Agent({
+            rejectUnauthorized: false
+        });
+
         // Send the message to the webhook
+        // Assuming the webhook expects { "message": "..." } or similar
         const response = await axios.post(interactionWebhookUrl, { message }, {
-            timeout: 300000, // 5 minutes timeout for slow AI responses
-            httpAgent: httpAgent,
             httpsAgent: httpsAgent,
-            maxRedirects: 5
+            timeout: 300000 // 5 minutes timeout for slow AI responses
         });
 
         let result = response.data;
@@ -125,7 +167,7 @@ app.post('/interact', async (req, res) => {
 
     } catch (error) {
         console.error('Interaction Error:', error.message);
-        res.status(500).json({ error: 'Failed to communicate with AI agent', details: error.message });
+        res.status(500).json({ error: 'Failed to communicate with AI agent' });
     }
 });
 
