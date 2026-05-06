@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ciel Mobility AI Agent</title>
+    <title>Ciel Mobility AI Agent - Home</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@300;500;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --neon-cyan: #00f3ff;
             --neon-violet: #bd00ff;
             --bg-dark: #050a14;
-            --panel-bg: rgba(10, 20, 40, 0.7);
             --danger: #ff2a6d;
         }
 
@@ -26,6 +25,8 @@
             color: #e0e0e0;
             height: 100vh;
             display: flex;
+            align-items: center;
+            justify-content: center;
             overflow: hidden;
             background-image:
                 radial-gradient(circle at 15% 50%, rgba(189, 0, 255, 0.05) 0%, transparent 25%),
@@ -43,515 +44,106 @@
             pointer-events: none;
         }
 
-        /* Sidebar - Insights */
-        .sidebar {
-            width: 280px;
-            background: rgba(5, 10, 20, 0.85);
-            border-right: 1px solid rgba(0, 243, 255, 0.2);
+        .container {
             display: flex;
             flex-direction: column;
-            backdrop-filter: blur(10px);
+            align-items: center;
             z-index: 10;
-        }
-
-        .logo-container {
-            padding: 20px;
-            border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+            padding: 50px 40px;
+            background: rgba(5, 10, 20, 0.6);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 243, 255, 0.05);
+            max-width: 500px;
+            width: 90%;
         }
 
         .logo {
             font-family: 'Orbitron', sans-serif;
-            font-size: 16px;
+            font-size: 28px;
             font-weight: 700;
             color: var(--neon-cyan);
             text-transform: uppercase;
             display: flex;
             align-items: center;
-            gap: 10px;
-            text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+            gap: 15px;
+            margin-bottom: 40px;
+            text-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+            text-align: center;
         }
 
         .logo::before {
             content: '';
             display: block;
-            width: 8px;
-            height: 8px;
+            width: 12px;
+            height: 12px;
             background: var(--neon-cyan);
             border-radius: 50%;
-            box-shadow: 0 0 10px var(--neon-cyan);
+            box-shadow: 0 0 15px var(--neon-cyan);
         }
 
-        .status-badge {
-            margin-top: 10px;
-            display: inline-block;
-            font-family: 'Rajdhani', sans-serif;
-            color: var(--neon-cyan);
-            border: 1px solid var(--neon-cyan);
-            padding: 2px 8px;
-            border-radius: 20px;
-            font-size: 10px;
-            letter-spacing: 1px;
-        }
-
-        .insights-wrapper {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .insights-title {
-            font-family: 'Orbitron', sans-serif;
-            color: var(--neon-violet);
-            font-size: 14px;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .insight-item {
-            background: rgba(0, 243, 255, 0.05);
-            border: 1px solid rgba(0, 243, 255, 0.1);
-            padding: 12px;
-            margin-bottom: 12px;
-            border-radius: 6px;
-            transition: all 0.2s;
-        }
-
-        .insight-item:hover {
-            border-color: var(--neon-cyan);
-            background: rgba(0, 243, 255, 0.1);
-        }
-
-        .insight-text {
-            font-family: 'Rajdhani', sans-serif;
-            color: #e0e0e0;
-            font-size: 14px;
-            margin-bottom: 10px;
-            line-height: 1.4;
-        }
-
-        .insight-btn {
-            background: transparent;
-            color: var(--neon-cyan);
-            border: 1px solid var(--neon-cyan);
-            padding: 4px 10px;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 9px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-transform: uppercase;
-            border-radius: 3px;
-        }
-
-        .insight-btn:hover {
-            background: var(--neon-cyan);
-            color: #000;
-        }
-
-        /* Main Area */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: row;
-        }
-
-        /* Report Pane */
-        .report-pane {
-            flex: 1;
-            position: relative;
-            background: rgba(0, 0, 0, 0.3);
+        .button-group {
             display: flex;
             flex-direction: column;
-        }
-
-        .welcome-screen {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            pointer-events: none;
-            z-index: 1;
-            transition: opacity 0.5s;
-        }
-
-        .welcome-screen h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 32px;
-            margin-bottom: 10px;
-            background: linear-gradient(to right, #fff, var(--neon-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .welcome-screen p {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 18px;
-            color: #8892b0;
-        }
-
-        #reportFrame {
+            gap: 20px;
             width: 100%;
-            height: 100%;
-            border: none;
-            z-index: 2;
-            background: transparent;
-        }
-        
-        #reportFrame.has-bg {
-            background: #fff; /* When actual report is loaded, give it white bg so content is legible */
         }
 
-        /* Chat Pane */
-        .chat-pane {
-            width: 400px;
-            min-width: 350px;
-            border-left: 1px solid rgba(189, 0, 255, 0.2);
-            display: flex;
-            flex-direction: column;
-            background: var(--panel-bg);
-            backdrop-filter: blur(10px);
-            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
-        }
-
-        .chat-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid rgba(189, 0, 255, 0.2);
-            font-family: 'Orbitron', sans-serif;
-            color: #fff;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .chat-header::before {
-            content: '💬';
-        }
-
-        .chat-messages {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            font-size: 14px;
-        }
-
-        .msg-container {
-            display: flex;
-            flex-direction: column;
-            max-width: 85%;
-        }
-
-        .msg-container.user {
-            align-self: flex-end;
-        }
-
-        .msg-container.ai {
-            align-self: flex-start;
-        }
-
-        .msg-bubble {
-            padding: 12px 16px;
-            border-radius: 12px;
-            line-height: 1.5;
-            word-wrap: break-word;
-        }
-
-        .msg-container.user .msg-bubble {
-            background: rgba(0, 243, 255, 0.1);
+        .nav-btn {
+            display: block;
+            width: 100%;
+            padding: 16px 24px;
+            background: rgba(0, 243, 255, 0.05);
             border: 1px solid rgba(0, 243, 255, 0.3);
-            border-bottom-right-radius: 2px;
             color: #fff;
-        }
-
-        .msg-container.ai .msg-bubble {
-            background: rgba(189, 0, 255, 0.1);
-            border: 1px solid rgba(189, 0, 255, 0.3);
-            border-bottom-left-radius: 2px;
-            color: #e0e0e0;
-        }
-
-        .msg-sender {
-            font-size: 11px;
-            color: #8892b0;
-            margin-bottom: 4px;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        .chat-input-area {
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.3);
-            border-top: 1px solid rgba(0, 243, 255, 0.2);
-        }
-
-        .file-indicator {
-            display: none;
-            align-items: center;
-            background: rgba(189, 0, 255, 0.15);
-            border: 1px solid var(--neon-violet);
-            border-radius: 6px;
-            padding: 8px 12px;
-            margin-bottom: 12px;
-            font-size: 12px;
-            color: #fff;
-            gap: 10px;
-        }
-
-        .file-indicator span {
-            flex: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .remove-file {
-            background: none;
-            border: none;
-            color: #ff2a6d;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        .input-wrapper {
-            display: flex;
-            align-items: center;
-            background: rgba(10, 20, 30, 0.8);
-            border: 1px solid rgba(0, 243, 255, 0.3);
-            border-radius: 24px;
-            padding: 5px 15px;
-            transition: all 0.3s;
-        }
-
-        .input-wrapper:focus-within {
-            border-color: var(--neon-cyan);
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
-        }
-
-        .attach-btn {
-            color: currentcolor;
-            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            font-family: 'Rajdhani', sans-serif;
             font-size: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: color 0.2s;
-            margin-right: 10px;
-        }
-        
-        .attach-btn svg {
-            width: 20px; height: 20px; stroke: #8892b0; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-            transition: stroke 0.2s;
+            font-weight: 600;
+            letter-spacing: 1px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
-        .attach-btn:hover svg {
-            stroke: var(--neon-cyan);
+        .nav-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 243, 255, 0.2), transparent);
+            transition: all 0.4s ease;
         }
 
-        .chat-input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: #fff;
-            padding: 12px 0;
-            outline: none;
-            font-family: 'Inter', sans-serif;
-            font-size: 14px;
-        }
-
-        .chat-input::placeholder {
-            color: #8892b0;
-        }
-
-        .send-btn {
-            background: var(--neon-violet);
-            color: #fff;
-            border: none;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .send-btn svg {
-            width: 16px; height: 16px; fill: #fff; transform: translateX(1px);
-        }
-
-        .send-btn:hover:not(:disabled) {
-            box-shadow: 0 0 15px var(--neon-violet);
-        }
-
-        .send-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            background: #555;
-        }
-
-        /* Loading Indicator */
-        .typing-indicator {
-            display: none;
-            flex-direction: row;
-            gap: 5px;
-            padding: 10px;
-        }
-        
-        .typing-dot {
-            width: 6px; height: 6px; background: var(--neon-cyan); border-radius: 50%;
-            animation: bounce 1.4s infinite ease-in-out both;
-        }
-        
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-        
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
-        }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(0, 243, 255, 0.3); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 243, 255, 0.6); }
-
-        /* Light Theme */
-        body.light-theme {
-            --neon-cyan: #0077b6;
-            --neon-violet: #7209b7;
-            --bg-dark: #f0f2f5;
-            --panel-bg: rgba(255, 255, 255, 0.9);
-            color: #333;
-            background-image: none;
-            background-color: var(--bg-dark);
-        }
-        body.light-theme .sidebar { background: rgba(255, 255, 255, 0.95); border-right: 1px solid #ddd; }
-        body.light-theme .chat-pane { background: rgba(255, 255, 255, 0.95); border-left: 1px solid #ddd; box-shadow: -5px 0 15px rgba(0,0,0,0.05); }
-        body.light-theme .chat-header { color: #333; border-bottom: 1px solid #eee; }
-        body.light-theme .chat-input-area { background: #fafafa; border-top: 1px solid #eee; }
-        body.light-theme .input-wrapper { background: #fff; border: 1px solid #ccc; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05); }
-        body.light-theme .chat-input { color: #333; }
-        body.light-theme .chat-input::placeholder { color: #999; }
-        body.light-theme .msg-container.user .msg-bubble { background: #e3f2fd; color: #01579b; border: 1px solid #bbdefb; }
-        body.light-theme .msg-container.ai .msg-bubble { background: #f3e5f5; color: #4a148c; border: 1px solid #e1bee7; }
-        body.light-theme .msg-sender { color: #666; }
-        body.light-theme .insight-item { background: #fff; border: 1px solid #eee; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        body.light-theme .insight-text { color: #444; }
-        body.light-theme .logo { color: #0077b6; text-shadow: none; }
-        body.light-theme .logo::before { background: #0077b6; box-shadow: none; }
-        body.light-theme .status-badge { color: #0077b6; border-color: #0077b6; }
-        body.light-theme .welcome-screen h1 { background: linear-gradient(to right, #333, #0077b6); -webkit-background-clip: text; text-shadow: none; }
-        body.light-theme .welcome-screen p { color: #666; }
-        body.light-theme .file-indicator { background: #f3e5f5; border-color: #ce93d8; color: #333; }
-        body.light-theme #matrix-bg { opacity: 0.05; filter: invert(1); }
-        
-        .theme-toggle {
-            background: rgba(0, 243, 255, 0.1);
-            border: 1px solid var(--neon-cyan);
+        .nav-btn:hover {
+            background: rgba(0, 243, 255, 0.15);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+            transform: translateY(-2px);
             color: var(--neon-cyan);
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s;
         }
-        .theme-toggle:hover {
-            background: var(--neon-cyan);
-            color: #000;
+
+        .nav-btn:hover::before {
+            left: 100%;
         }
-        body.light-theme .theme-toggle {
-            background: transparent;
-            border-color: #0077b6;
-            color: #0077b6;
+
+        .nav-btn.secondary {
+            border-color: rgba(189, 0, 255, 0.3);
+            background: rgba(189, 0, 255, 0.05);
         }
-        body.light-theme .theme-toggle:hover {
-            background: #0077b6;
+
+        .nav-btn.secondary:hover {
+            background: rgba(189, 0, 255, 0.15);
+            border-color: var(--neon-violet);
+            box-shadow: 0 0 20px rgba(189, 0, 255, 0.2);
             color: #fff;
         }
 
-        /* Sunset Theme */
-        body.sunset-theme {
-            --neon-cyan: #ff7b00;
-            --neon-violet: #ff0055;
-            --bg-dark: #1f0b0f;
-            --panel-bg: rgba(40, 15, 20, 0.8);
-            color: #ffe6e6;
-            background-color: var(--bg-dark);
-        }
-        body.sunset-theme .sidebar { background: rgba(30, 10, 15, 0.9); border-right: 1px solid rgba(255, 123, 0, 0.2); }
-        body.sunset-theme .chat-pane { background: rgba(30, 10, 15, 0.9); border-left: 1px solid rgba(255, 0, 85, 0.2); }
-        body.sunset-theme .chat-header { color: #ffebcd; border-bottom: 1px solid rgba(255, 0, 85, 0.2); }
-        body.sunset-theme .chat-input-area { background: rgba(20, 5, 10, 0.9); border-top: 1px solid rgba(255, 123, 0, 0.2); }
-        body.sunset-theme .input-wrapper { background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 123, 0, 0.3); }
-        body.sunset-theme .chat-input { color: #ffe6e6; }
-        body.sunset-theme .chat-input::placeholder { color: #aa8888; }
-        body.sunset-theme .msg-container.user .msg-bubble { background: rgba(255, 123, 0, 0.15); color: #fff; border: 1px solid rgba(255, 123, 0, 0.3); }
-        body.sunset-theme .msg-container.ai .msg-bubble { background: rgba(255, 0, 85, 0.15); color: #ffe6e6; border: 1px solid rgba(255, 0, 85, 0.3); }
-        body.sunset-theme .msg-sender { color: #ffb380; }
-        body.sunset-theme .insight-item { background: rgba(255, 123, 0, 0.05); border: 1px solid rgba(255, 123, 0, 0.15); }
-        body.sunset-theme .insight-text { color: #ffe6e6; }
-        body.sunset-theme .logo { color: #ff7b00; text-shadow: 0 0 10px rgba(255, 123, 0, 0.4); }
-        body.sunset-theme .logo::before { background: #ff7b00; box-shadow: 0 0 10px #ff7b00; }
-        body.sunset-theme .status-badge { color: #ff7b00; border-color: #ff7b00; }
-        body.sunset-theme .welcome-screen h1 { background: linear-gradient(to right, #ffe6e6, #ff7b00); -webkit-background-clip: text; }
-        body.sunset-theme .welcome-screen p { color: #ffb380; }
-        body.sunset-theme .file-indicator { background: rgba(255, 0, 85, 0.15); border-color: #ff0055; color: #ffe6e6; }
-        body.sunset-theme .theme-toggle { border-color: #ff7b00; color: #ff7b00; background: transparent; }
-        body.sunset-theme .theme-toggle:hover { background: #ff7b00; color: #000; }
-        body.sunset-theme #matrix-bg { opacity: 0.1; filter: hue-rotate(320deg) brightness(1.5); }
-
-        /* Mobile Responsiveness */
-        @media (max-width: 850px) {
-            body {
-                flex-direction: column;
-                height: auto;
-                min-height: 100vh;
-                overflow-y: auto;
-                overflow-x: hidden;
-            }
-            .sidebar {
-                width: 100%;
-                border-right: none;
-                border-bottom: 1px solid rgba(0, 243, 255, 0.2);
-            }
-            .insights-wrapper {
-                max-height: 30vh;
-                min-height: 150px;
-            }
-            .main-content {
-                flex-direction: column;
-                width: 100%;
-            }
-            .report-pane {
-                width: 100%;
-                height: 50vh;
-                min-height: 300px;
-            }
-            .chat-pane {
-                width: 100%;
-                min-width: 100%;
-                height: 60vh;
-                min-height: 400px;
-                border-left: none;
-                border-top: 1px solid rgba(189, 0, 255, 0.2);
-                box-shadow: none;
-            }
-            
-            body.light-theme .sidebar { border-bottom: 1px solid #ddd; border-right: none; }
-            body.light-theme .chat-pane { border-top: 1px solid #ddd; border-left: none; box-shadow: none; }
-            body.sunset-theme .sidebar { border-bottom: 1px solid rgba(255, 123, 0, 0.2); border-right: none; }
-            body.sunset-theme .chat-pane { border-top: 1px solid rgba(255, 0, 85, 0.2); border-left: none; }
+        .nav-btn.secondary::before {
+            background: linear-gradient(90deg, transparent, rgba(189, 0, 255, 0.2), transparent);
         }
     </style>
 </head>
@@ -559,75 +151,18 @@
 
     <canvas id="matrix-bg"></canvas>
 
-    <aside class="sidebar">
-        <div class="logo-container" style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div>
-                <div class="logo">Ciel Mobility AI</div>
-                <div class="status-badge">SYSTEM ONLINE</div>
-            </div>
-            <button id="themeToggle" class="theme-toggle" title="Toggle Theme">
-                <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
+    <div class="container">
+        <div class="logo">Ciel Mobility AI</div>
+        
+        <div class="button-group">
+            <a href="basic_analysis.html" class="nav-btn">기본물류분석</a>
+            <a href="basic_analysis.html" class="nav-btn secondary">주류분석</a>
+            <a href="#" class="nav-btn secondary">지식베이스 추가</a>
         </div>
-        <div class="insights-wrapper">
-            <div class="insights-title">Strategic Insights</div>
-            <div id="insightsList">
-                <div class="insight-text" style="color: #8892b0; font-size: 13px;">No insights generated yet. Upload data to begin analysis.</div>
-            </div>
-        </div>
-    </aside>
-
-    <main class="main-content">
-        <div class="report-pane">
-            <div class="welcome-screen" id="welcomeScreen">
-                <h1>Logistics AI Core</h1>
-                <p>Attach a dataset or type a query to deploy agents.</p>
-            </div>
-            <iframe id="reportFrame" sandbox="allow-scripts allow-same-origin"></iframe>
-        </div>
-
-        <div class="chat-pane">
-            <div class="chat-header">Analysis Chat</div>
-            
-            <div class="chat-messages" id="chatMessages">
-                <div class="msg-container ai">
-                    <div class="msg-sender">System</div>
-                    <div class="msg-bubble">Agent connection established. Awaiting dataset or command.</div>
-                </div>
-            </div>
-            
-            <!-- Typing / Processing indicator -->
-            <div class="typing-indicator" id="typingIndicator">
-                <div class="msg-sender" style="margin-right: 10px;">Ciel AI processing</div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-            </div>
-
-            <div class="chat-input-area">
-                <div class="file-indicator" id="fileIndicator">
-                    📎 <span id="fileName">dataset.xlsx</span>
-                    <button class="remove-file" id="removeFile">&times;</button>
-                </div>
-                
-                <div class="input-wrapper">
-                    <label for="fileInput" class="attach-btn" title="Attach file">
-                        <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                    </label>
-                    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" style="display: none;">
-                    
-                    <input type="text" id="chatInput" class="chat-input" placeholder="Message or upload data..." autocomplete="off">
-                    
-                    <button class="send-btn" id="sendBtn" disabled>
-                        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </main>
+    </div>
 
     <script>
-        // Matrix Background
+        // Matrix Background Script
         const canvas = document.getElementById('matrix-bg');
         const ctx = canvas.getContext('2d');
         let width = canvas.width = window.innerWidth;
@@ -650,225 +185,6 @@
         }
         setInterval(matrix, 50);
         window.addEventListener('resize', () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; });
-
-        // UI Elements
-        const fileInput = document.getElementById('fileInput');
-        const fileIndicator = document.getElementById('fileIndicator');
-        const fileName = document.getElementById('fileName');
-        const removeFile = document.getElementById('removeFile');
-        const chatInput = document.getElementById('chatInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const chatMessages = document.getElementById('chatMessages');
-        const typingIndicator = document.getElementById('typingIndicator');
-        const reportFrame = document.getElementById('reportFrame');
-        const welcomeScreen = document.getElementById('welcomeScreen');
-        const insightsList = document.getElementById('insightsList');
-
-        // Handlers
-        function updateSendButtonState() {
-            if (chatInput.value.trim() || fileInput.files.length > 0) {
-                sendBtn.disabled = false;
-            } else {
-                sendBtn.disabled = true;
-            }
-        }
-
-        chatInput.addEventListener('input', updateSendButtonState);
-
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files.length > 0) {
-                fileName.textContent = fileInput.files[0].name;
-                fileIndicator.style.display = 'flex';
-                updateSendButtonState();
-            }
-        });
-
-        removeFile.addEventListener('click', () => {
-            fileInput.value = '';
-            fileIndicator.style.display = 'none';
-            updateSendButtonState();
-        });
-
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleSend();
-        });
-
-        sendBtn.addEventListener('click', handleSend);
-
-        function addMessage(role, text) {
-            const container = document.createElement('div');
-            container.className = `msg-container ${role === 'user' ? 'user' : 'ai'}`;
-            
-            const sender = document.createElement('div');
-            sender.className = 'msg-sender';
-            sender.textContent = role === 'user' ? 'You' : 'Ciel AI';
-            
-            const bubble = document.createElement('div');
-            bubble.className = 'msg-bubble';
-            // Allow basic HTML in AI messages mainly for quick formats, but usually text
-            bubble.innerHTML = text;
-            
-            container.appendChild(sender);
-            container.appendChild(bubble);
-            chatMessages.appendChild(container);
-            
-            // Scroll to bottom
-            setTimeout(() => chatMessages.scrollTop = chatMessages.scrollHeight, 50);
-        }
-
-        async function handleSend() {
-            const text = chatInput.value.trim();
-            const hasFile = fileInput.files.length > 0;
-
-            if (!text && !hasFile) return;
-
-            // UI Feedback
-            if (hasFile) {
-                const file = fileInput.files[0];
-                addMessage('user', `📎 Attached dataset: <b>${file.name}</b><br/>${text}`);
-                
-                // Clear inputs
-                const formData = new FormData();
-                formData.append('file', file);
-                
-                fileInput.value = '';
-                fileIndicator.style.display = 'none';
-                chatInput.value = '';
-                updateSendButtonState();
-                
-                await processUpload(formData, file.name);
-            } else {
-                addMessage('user', text);
-                chatInput.value = '';
-                updateSendButtonState();
-                
-                await processInteraction(text);
-            }
-        }
-
-        function setProcessing(isProcessing) {
-            typingIndicator.style.display = isProcessing ? 'flex' : 'none';
-            chatInput.disabled = isProcessing;
-            fileInput.disabled = isProcessing;
-            if(isProcessing) {
-                sendBtn.disabled = true;
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-        }
-
-        function updateReportAndInsights(data) {
-            welcomeScreen.style.opacity = '0';
-            
-            if (data.html) {
-                reportFrame.classList.add('has-bg');
-                reportFrame.srcdoc = data.html;
-            }
-
-            if (data.insights && Array.isArray(data.insights)) {
-                insightsList.innerHTML = ''; // Clear previous
-                data.insights.forEach(insight => {
-                    const div = document.createElement('div');
-                    div.className = 'insight-item';
-                    div.innerHTML = `
-                        <div class="insight-text">${insight}</div>
-                        <button class="insight-btn" onclick="verifyInsight('${insight.replace(/'/g, "\\'")}')">Analyze</button>
-                    `;
-                    insightsList.appendChild(div);
-                });
-            }
-        }
-
-        async function processUpload(formData, fileName) {
-            setProcessing(true);
-            try {
-                const aiMessages = [
-                    "Ingesting logistics dataset...",
-                    "Validating data integrity...",
-                    "Simulating delivery scenarios..."
-                ];
-                let msgIndex = 0;
-                
-                const response = await fetch('/upload', { method: 'POST', body: formData });
-                if (!response.ok) throw new Error(`Server returned ${response.status}`);
-                
-                const data = await response.json();
-                
-                updateReportAndInsights(data);
-                addMessage('ai', `Analysis complete for <b>${fileName}</b>. Report has been generated to the left dashboard.`);
-                
-            } catch (err) {
-                console.error(err);
-                addMessage('ai', `System Error: Failed to process dataset. ${err.message}`);
-            } finally {
-                setProcessing(false);
-            }
-        }
-
-        async function processInteraction(text) {
-            setProcessing(true);
-            try {
-                const response = await fetch('/interact', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text })
-                });
-                
-                if (!response.ok) throw new Error(`Server returned ${response.status}`);
-                const data = await response.json();
-                
-                if (data.html || data.insights) {
-                    updateReportAndInsights(data);
-                }
-                
-                let aiResponse = "Dashboard updated with your query.";
-                if (data.text) aiResponse = data.text;
-                else if (typeof data === 'string') aiResponse = data;
-                
-                addMessage('ai', aiResponse);
-
-            } catch (err) {
-                console.error(err);
-                addMessage('ai', `System Error: Failed to connect to AI Agent. ${err.message}`);
-            } finally {
-                setProcessing(false);
-            }
-        }
-
-        // Global function for UI onclick
-        window.verifyInsight = function(text) {
-            chatInput.value = `Elaborate on: "${text}"`;
-            updateSendButtonState();
-            chatInput.focus();
-        };
-
-        // Theme Toggle Logic
-        const themeToggle = document.getElementById('themeToggle');
-        const themes = ['dark', 'light', 'sunset'];
-        let currentThemeIndex = 0;
-        
-        function setTheme(theme) {
-            document.body.classList.remove('light-theme', 'sunset-theme');
-            if (theme === 'light') document.body.classList.add('light-theme');
-            if (theme === 'sunset') document.body.classList.add('sunset-theme');
-            localStorage.setItem('theme', theme);
-            
-            const idx = themes.indexOf(theme);
-            currentThemeIndex = idx > -1 ? idx : 0;
-        }
-        
-        // Retrieve saved theme or default to dark
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme && themes.includes(savedTheme)) {
-            setTheme(savedTheme);
-        } else {
-            setTheme('dark');
-        }
-        
-        themeToggle.addEventListener('click', () => {
-            currentThemeIndex = (currentThemeIndex + 1) % themes.length;
-            setTheme(themes[currentThemeIndex]);
-        });
-
     </script>
 </body>
 </html>
