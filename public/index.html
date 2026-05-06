@@ -759,9 +759,9 @@
         function updateReportAndInsights(data) {
             welcomeScreen.style.opacity = '0';
             
-            if (data.output) {
+            if (data.html) {
                 reportFrame.classList.add('has-bg');
-                reportFrame.srcdoc = data.output;
+                reportFrame.srcdoc = data.html;
             }
 
             if (data.insights && Array.isArray(data.insights)) {
@@ -816,7 +816,7 @@
                 if (!response.ok) throw new Error(`Server returned ${response.status}`);
                 const data = await response.json();
                 
-                if (data.output || data.insights) {
+                if (data.html || data.insights) {
                     updateReportAndInsights(data);
                 }
                 

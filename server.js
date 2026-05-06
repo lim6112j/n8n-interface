@@ -74,13 +74,13 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             result = result[0];
         }
         console.log(result)
-        // Check for nested structure { output: { output: "...", insights: [...] } }
+        // Check for nested structure { output: { html: "...", insights: [...] } }
         // N8n sometimes wraps the response in an 'output' property
-        if (result && result.output && typeof result.output === 'object' && result.output.output) {
+        if (result && result.output && typeof result.output === 'object' && result.output.html) {
             result = result.output;
         }
 
-        // Just send the result as JSON. The frontend will handle { output, insights }
+        // Just send the result as JSON. The frontend will handle { html, insights }
         res.json(result);
 
     } catch (error) {
@@ -115,8 +115,8 @@ app.post('/interact', async (req, res) => {
             result = result[0];
         }
 
-        // Check for nested structure { output: { output: "...", insights: [...] } }
-        if (result && result.output && typeof result.output === 'object' && result.output.output) {
+        // Check for nested structure { output: { html: "...", insights: [...] } }
+        if (result && result.output && typeof result.output === 'object' && result.output.html) {
             result = result.output;
         }
 
