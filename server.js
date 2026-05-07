@@ -48,7 +48,8 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
         // production 
         // const webhookUrl = 'https://draven-reparative-subfestively.ngrok-free.dev/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
-	const webhookUrl = 'http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
+        const sessionId = req.query.sessionId || '';
+	    const webhookUrl = `http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991${sessionId ? `?sessionId=${sessionId}` : ''}`;
         const fileBuffer = fs.readFileSync(filePath);
 
         // Increase timeout to 15 minutes (900000 ms) as requested
@@ -97,8 +98,9 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 // Chat / Interaction Endpoint
 app.post('/interact', async (req, res) => {
     const { message } = req.body;
+    const sessionId = req.query.sessionId || '';
     // const interactionWebhookUrl = 'https://draven-reparative-subfestively.ngrok-free.dev/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
-    const interactionWebhookUrl = 'http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
+    const interactionWebhookUrl = `http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991${sessionId ? `?sessionId=${sessionId}` : ''}`;
     try {
         // Send the message to the webhook
         const response = await axios.post(interactionWebhookUrl, { message }, {

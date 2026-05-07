@@ -223,6 +223,12 @@
         window.addEventListener('resize', () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; });
 
         // Logic
+        let sessionId = sessionStorage.getItem('sessionId');
+        if (!sessionId) {
+            sessionId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+            sessionStorage.setItem('sessionId', sessionId);
+        }
+
         const fileInput = document.getElementById('fileInput');
         const addBtn = document.getElementById('addBtn');
         const fileNameDisplay = document.getElementById('fileNameDisplay');
@@ -253,7 +259,7 @@
             statusMessage.className = '';
 
             try {
-                const response = await fetch('http://localhost:5678/webhook/cunsult-rag', {
+                const response = await fetch(`http://localhost:5678/webhook/cunsult-rag?sessionId=${sessionId}`, {
                     method: 'POST',
                     body: formData
                 });
