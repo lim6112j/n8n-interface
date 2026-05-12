@@ -23,6 +23,8 @@ const httpsAgent = new https.Agent({
     maxVersion: 'TLSv1.2'
 });
 
+app.use(express.json()); // Parse JSON bodies — MUST be before routes that need body parsing
+
 // In-memory store for async callback results (sessionId → { html, insights, receivedAt })
 const callbackStore = new Map();
 
@@ -50,8 +52,6 @@ app.get('/status/:sessionId', (req, res) => {
 
 // Serve static files from the public directory
 app.use(express.static('public'));
-
-app.use(express.json()); // Parse JSON bodies for chat interaction
 
 app.post('/upload', upload.single('file'), async (req, res) => {
     if (!req.file) {
