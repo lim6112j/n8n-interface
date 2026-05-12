@@ -19,3 +19,5 @@ Thumbs.db
 *.xls
 .pi
 __pycache__
+mcp-n8n-client.js
+mcp_n8n_client.py
