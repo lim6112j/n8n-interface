@@ -23,8 +23,34 @@ const httpsAgent = new https.Agent({
     maxVersion: 'TLSv1.2'
 });
 
+// In-memory store for async callback results (sessionId → { html, insights, receivedAt })
+const callbackStore = new Map();
+
+// Callback endpoint for n8n async workflows
+app.post('/callback', (req, res) => {
+    const { sessionId, html, insights } = req.body;
+    if (!sessionId) {
+        return res.status(400).json({ error: 'sessionId required' });
+    }
+    callbackStore.set(sessionId, { html, insights, receivedAt: new Date().toISOString() });
+    console.log(`[callback] Received result for sessionId=${sessionId}`);
+    // Auto-cleanup after 10 minutes
+    setTimeout(() => callbackStore.delete(sessionId), 10 * 60 * 1000);
+    res.json({ success: true });
+});
+
+// Status endpoint for frontend polling
+app.get('/status/:sessionId', (req, res) => {
+    const result = callbackStore.get(req.params.sessionId);
+    if (!result) {
+        return res.json({ status: 'pending' });
+    }
+    res.json({ status: 'completed', html: result.html, insights: result.insights });
+});
+
 // Serve static files from the public directory
 app.use(express.static('public'));
+
 app.use(express.json()); // Parse JSON bodies for chat interaction
 
 app.post('/upload', upload.single('file'), async (req, res) => {
@@ -74,7 +100,18 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         if (Array.isArray(result) && result.length > 0) {
             result = result[0];
         }
+        // Check for async webhook response (onReceived mode)
+        if (result && result.code === 0 && result.message && result.message.includes('Workflow got started')) {
+            return res.json({ accepted: true, sessionId, status: 'processing' });
+        }
+
+        // Check for unused Respond to Webhook warning (legacy after switch to async)
+        if (result && result.code === 0 && result.message && result.message.includes('Unused Respond to Webhook')) {
+            return res.json({ accepted: true, sessionId, status: 'processing' });
+        }
+
         console.log(result)
+
         // Check for nested structure { output: { html: "...", insights: [...] } }
         // N8n sometimes wraps the response in an 'output' property
         if (result && result.output && typeof result.output === 'object' && result.output.html) {
@@ -115,6 +152,16 @@ app.post('/interact', async (req, res) => {
         // Normalize response structure (same as /upload)
         if (Array.isArray(result) && result.length > 0) {
             result = result[0];
+        }
+
+        // Check for async webhook response (onReceived mode)
+        if (result && result.code === 0 && result.message && result.message.includes('Workflow got started')) {
+            return res.json({ accepted: true, sessionId, status: 'processing' });
+        }
+
+        // Check for unused Respond to Webhook warning (legacy after switch to async)
+        if (result && result.code === 0 && result.message && result.message.includes('Unused Respond to Webhook')) {
+            return res.json({ accepted: true, sessionId, status: 'processing' });
         }
 
         // Check for nested structure { output: { html: "...", insights: [...] } }

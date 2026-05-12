@@ -1042,14 +1042,66 @@
             }
         }
 
-        function setProcessing(isProcessing) {
+        function setProcessing(isProcessing, message = null) {
             typingIndicator.style.display = isProcessing ? 'flex' : 'none';
+            if (message) {
+                const senderEl = typingIndicator.querySelector('.msg-sender');
+                if (senderEl) senderEl.textContent = message;
+            }
             chatInput.disabled = isProcessing;
             fileInput.disabled = isProcessing;
             if (isProcessing) {
                 sendBtn.disabled = true;
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
+        }
+
+        async function pollForResult(sessionId, fileName = null) {
+            const POLL_INTERVAL = 3000; // 3 seconds
+            const MAX_ATTEMPTS = 200;   // ~10 minutes max
+            let attempts = 0;
+
+            const poll = async () => {
+                attempts++;
+                try {
+                    const response = await fetch(`/status/${sessionId}`);
+                    if (!response.ok) throw new Error(`Status check returned ${response.status}`);
+                    const data = await response.json();
+
+                    if (data.status === 'completed') {
+                        setProcessing(false);
+                        updateReportAndInsights(data);
+                        if (fileName) {
+                            addMessage('ai', `Analysis complete for <b>${fileName}</b>. Report generated to the left dashboard.`);
+                        } else {
+                            addMessage('ai', 'Dashboard updated with your query.');
+                        }
+                        return;
+                    }
+
+                    if (attempts >= MAX_ATTEMPTS) {
+                        setProcessing(false);
+                        addMessage('ai', 'Analysis timed out after 10 minutes. Please try again later.');
+                        return;
+                    }
+
+                    // Still pending - update message with attempt count
+                    setProcessing(true, `Ciel AI processing (check ${attempts}/${MAX_ATTEMPTS})`);
+                    setTimeout(poll, POLL_INTERVAL);
+
+                } catch (err) {
+                    console.error('Poll error:', err);
+                    if (attempts >= MAX_ATTEMPTS) {
+                        setProcessing(false);
+                        addMessage('ai', `Analysis timed out: ${err.message}`);
+                        return;
+                    }
+                    setTimeout(poll, POLL_INTERVAL);
+                }
+            };
+
+            setProcessing(true, 'Ciel AI processing...');
+            poll();
         }
 
         function updateReportAndInsights(data) {
@@ -1075,33 +1127,30 @@
         }
 
         async function processUpload(formData, fileName) {
-            setProcessing(true);
             try {
-                const aiMessages = [
-                    "Ingesting logistics dataset...",
-                    "Validating data integrity...",
-                    "Simulating delivery scenarios..."
-                ];
-                let msgIndex = 0;
-
                 const response = await fetch(`/upload?sessionId=${sessionId}`, { method: 'POST', body: formData });
                 if (!response.ok) throw new Error(`Server returned ${response.status}`);
 
                 const data = await response.json();
 
+                // Async mode: workflow started, poll for result
+                if (data.accepted === true && data.status === 'processing') {
+                    await pollForResult(sessionId, fileName);
+                    return;
+                }
+
+                // Sync mode: result already available
                 updateReportAndInsights(data);
                 addMessage('ai', `Analysis complete for <b>${fileName}</b>. Report has been generated to the left dashboard.`);
 
             } catch (err) {
                 console.error(err);
                 addMessage('ai', `System Error: Failed to process dataset. ${err.message}`);
-            } finally {
                 setProcessing(false);
             }
         }
 
         async function processInteraction(text) {
-            setProcessing(true);
             try {
                 const response = await fetch(`/interact?sessionId=${sessionId}`, {
                     method: 'POST',
@@ -1112,6 +1161,13 @@
                 if (!response.ok) throw new Error(`Server returned ${response.status}`);
                 const data = await response.json();
 
+                // Async mode: workflow started, poll for result
+                if (data.accepted === true && data.status === 'processing') {
+                    await pollForResult(sessionId);
+                    return;
+                }
+
+                // Sync mode: result already available
                 if (data.html || data.insights) {
                     updateReportAndInsights(data);
                 }
@@ -1125,7 +1181,6 @@
             } catch (err) {
                 console.error(err);
                 addMessage('ai', `System Error: Failed to connect to AI Agent. ${err.message}`);
-            } finally {
                 setProcessing(false);
             }
         }

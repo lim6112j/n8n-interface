@@ -17,3 +17,5 @@ Thumbs.db
 # Test data
 *.xlsx
 *.xls
+.pi
+__pycache__
