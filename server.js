@@ -101,7 +101,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             result = result[0];
         }
         // Check for async webhook response (onReceived mode)
-        if (result && result.code === 0 && result.message && result.message.includes('Workflow got started')) {
+        if (result && result.message && (result.message.includes('Workflow was started') || result.message.includes('Workflow got started'))) {
             return res.json({ accepted: true, sessionId, status: 'processing' });
         }
 
@@ -155,7 +155,7 @@ app.post('/interact', async (req, res) => {
         }
 
         // Check for async webhook response (onReceived mode)
-        if (result && result.code === 0 && result.message && result.message.includes('Workflow got started')) {
+        if (result && result.message && (result.message.includes('Workflow was started') || result.message.includes('Workflow got started'))) {
             return res.json({ accepted: true, sessionId, status: 'processing' });
         }
 
