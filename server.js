@@ -139,8 +139,8 @@ app.post('/interact', async (req, res) => {
     // const interactionWebhookUrl = 'https://draven-reparative-subfestively.ngrok-free.dev/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
     const interactionWebhookUrl = `http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991${sessionId ? `?sessionId=${sessionId}` : ''}`;
     try {
-        // Send the message to the webhook
-        const response = await axios.post(interactionWebhookUrl, { message }, {
+        // Send the message to the webhook — wrap in { body } so n8n workflow's Switch node can match it
+        const response = await axios.post(interactionWebhookUrl, { body: { message } }, {
             timeout: 300000, // 5 minutes timeout for slow AI responses
             httpAgent: httpAgent,
             httpsAgent: httpsAgent,
