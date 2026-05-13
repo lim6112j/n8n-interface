@@ -6,6 +6,15 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const https = require('https');
+const { Pool } = require('pg');
+
+const pool = new Pool({
+    user: 'mobble_ai',
+    host: 'localhost',
+    database: 'mobble',
+    password: 'ciel@105',
+    port: 5432,
+});
 
 const app = express();
 const port = 3000;
@@ -52,6 +61,131 @@ app.get('/status/:sessionId', (req, res) => {
 
 // Serve static files from the public directory
 app.use(express.static('public'));
+
+// --- Database API Endpoints ---
+
+// Get all user-defined tables
+app.get('/api/db/tables', async (req, res) => {
+    try {
+        const query = `
+            SELECT tablename 
+            FROM pg_catalog.pg_tables 
+            WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema'
+            ORDER BY tablename ASC;
+        `;
+        const result = await pool.query(query);
+        res.json({ tables: result.rows.map(row => row.tablename) });
+    } catch (error) {
+        console.error('Error fetching tables:', error);
+        res.status(500).json({ error: 'Failed to fetch tables' });
+    }
+});
+
+// Get table data
+app.get('/api/db/tables/:tableName', async (req, res) => {
+    const { tableName } = req.params;
+    if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {
+        return res.status(400).json({ error: 'Invalid table name' });
+    }
+    try {
+        // Get column info
+        const colQuery = `
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name = $1
+            ORDER BY ordinal_position ASC;
+        `;
+        const colResult = await pool.query(colQuery, [tableName]);
+        
+        let dataQuery = `SELECT * FROM "${tableName}" LIMIT 1000;`;
+        // Try to order by id if it exists
+        if (colResult.rows.some(col => col.column_name === 'id')) {
+            dataQuery = `SELECT * FROM "${tableName}" ORDER BY id ASC LIMIT 1000;`;
+        }
+        
+        const dataResult = await pool.query(dataQuery);
+        
+        res.json({ 
+            columns: colResult.rows,
+            data: dataResult.rows 
+        });
+    } catch (error) {
+        console.error(`Error fetching data for ${tableName}:`, error);
+        res.status(500).json({ error: `Failed to fetch data for ${tableName}` });
+    }
+});
+
+// Add new row
+app.post('/api/db/tables/:tableName', async (req, res) => {
+    const { tableName } = req.params;
+    if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {
+        return res.status(400).json({ error: 'Invalid table name' });
+    }
+    try {
+        const rowData = req.body;
+        // Filter out 'id' if it's empty to allow auto-increment
+        const columns = Object.keys(rowData).filter(col => col !== 'id' || rowData[col] !== '');
+        const values = columns.map(col => rowData[col]);
+        const placeholders = columns.map((_, i) => `$${i + 1}`);
+        
+        if (columns.length === 0) {
+             return res.status(400).json({ error: 'No data provided' });
+        }
+
+        const query = `INSERT INTO "${tableName}" ("${columns.join('", "')}") VALUES (${placeholders.join(', ')}) RETURNING *`;
+        const result = await pool.query(query, values);
+        res.json({ success: true, row: result.rows[0] });
+    } catch (error) {
+        console.error(`Error inserting into ${tableName}:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update row
+app.put('/api/db/tables/:tableName/:id', async (req, res) => {
+    const { tableName, id } = req.params;
+    if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {
+        return res.status(400).json({ error: 'Invalid table name' });
+    }
+    try {
+        const rowData = req.body;
+        const columns = Object.keys(rowData).filter(col => col !== 'id');
+        const values = columns.map(col => rowData[col]);
+        
+        const setClause = columns.map((col, i) => `"${col}" = $${i + 1}`).join(', ');
+        
+        values.push(id);
+        const query = `UPDATE "${tableName}" SET ${setClause} WHERE id = $${values.length} RETURNING *`;
+        
+        const result = await pool.query(query, values);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Row not found' });
+        }
+        res.json({ success: true, row: result.rows[0] });
+    } catch (error) {
+        console.error(`Error updating ${tableName}:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete row
+app.delete('/api/db/tables/:tableName/:id', async (req, res) => {
+    const { tableName, id } = req.params;
+    if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {
+        return res.status(400).json({ error: 'Invalid table name' });
+    }
+    try {
+        const query = `DELETE FROM "${tableName}" WHERE id = $1 RETURNING *`;
+        const result = await pool.query(query, [id]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Row not found' });
+        }
+        res.json({ success: true, row: result.rows[0] });
+    } catch (error) {
+        console.error(`Error deleting from ${tableName}:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 app.post('/upload', upload.single('file'), async (req, res) => {
     if (!req.file) {
