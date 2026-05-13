@@ -184,6 +184,35 @@
             opacity: 0.7;
         }
 
+        .table-name-input {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--neon-violet);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .table-name-input:focus {
+            box-shadow: 0 0 10px rgba(189, 0, 255, 0.3);
+            border-color: #d400ff;
+        }
+
+        .table-name-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .upload-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 200px;
+        }
+
         .table-header {
             display: flex;
             justify-content: space-between;
@@ -332,7 +361,10 @@
                     <div class="file-name" id="fileNameDisplay"></div>
                     <input type="file" id="fileInput" multiple accept=".xlsx, .xls, .csv">
                 </label>
-                <button class="add-btn" id="uploadBtn" disabled>UPLOAD EXCEL</button>
+                <div class="upload-controls">
+                    <input type="text" id="tableNameInput" class="table-name-input" placeholder="Table Name (Optional)">
+                    <button class="add-btn" id="uploadBtn" disabled>UPLOAD EXCEL</button>
+                </div>
             </div>
 
             <div class="table-header">
@@ -594,11 +626,21 @@
                 formData.append(`file${i}`, fileInput.files[i]);
             }
             
+            const tableName = document.getElementById('tableNameInput').value.trim();
+            if (tableName) {
+                formData.append('tableName', tableName);
+            }
+            
             uploadBtn.disabled = true;
             uploadBtn.textContent = 'UPLOADING...';
 
             try {
-                const response = await fetch(`http://localhost:5678/webhook/xlsx-multi-to-pg?sessionId=${sessionId}`, {
+                let webhookUrl = `http://localhost:5678/webhook/xlsx-multi-to-pg?sessionId=${sessionId}`;
+                if (tableName) {
+                    webhookUrl += `&tableName=${encodeURIComponent(tableName)}`;
+                }
+
+                const response = await fetch(webhookUrl, {
                     method: 'POST',
                     body: formData
                 });
@@ -607,7 +649,10 @@
                     showStatus('Successfully added to database!');
                     fileInput.value = '';
                     fileNameDisplay.style.display = 'none';
+                    document.getElementById('tableNameInput').value = '';
                     setTimeout(() => { uploadBtn.disabled = true; uploadBtn.textContent = 'UPLOAD EXCEL'; }, 2000);
+                    // Refresh table list to show the new table
+                    fetchTables();
                 } else {
                     throw new Error(`Server returned ${response.status}`);
                 }
