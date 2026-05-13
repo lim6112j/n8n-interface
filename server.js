@@ -206,10 +206,9 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             contentType: contentType // Dynamic content type
         });
 
-        // production 
-        // const webhookUrl = 'https://draven-reparative-subfestively.ngrok-free.dev/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
-        const sessionId = req.query.sessionId || '';
-	    const webhookUrl = `http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991${sessionId ? `?sessionId=${sessionId}` : ''}`;
+        // Generate unique requestId for this specific request so upload and interact don't share callback store keys
+        const requestId = crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        const webhookUrl = `http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991?sessionId=${requestId}`;
         const fileBuffer = fs.readFileSync(filePath);
 
         // Increase timeout to 15 minutes (900000 ms) as requested
@@ -236,12 +235,12 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         }
         // Check for async webhook response (onReceived mode)
         if (result && result.message && (result.message.includes('Workflow was started') || result.message.includes('Workflow got started'))) {
-            return res.json({ accepted: true, sessionId, status: 'processing' });
+            return res.json({ accepted: true, requestId, status: 'processing' });
         }
 
         // Check for unused Respond to Webhook warning (legacy after switch to async)
         if (result && result.code === 0 && result.message && result.message.includes('Unused Respond to Webhook')) {
-            return res.json({ accepted: true, sessionId, status: 'processing' });
+            return res.json({ accepted: true, requestId, status: 'processing' });
         }
 
         console.log(result)
@@ -269,9 +268,10 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 // Chat / Interaction Endpoint
 app.post('/interact', async (req, res) => {
     const { message } = req.body;
-    const sessionId = req.query.sessionId || '';
+    // Generate unique requestId for this specific request so upload and interact don't share callback store keys
+    const requestId = crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     // const interactionWebhookUrl = 'https://draven-reparative-subfestively.ngrok-free.dev/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
-    const interactionWebhookUrl = `http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991${sessionId ? `?sessionId=${sessionId}` : ''}`;
+    const interactionWebhookUrl = `http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991?sessionId=${requestId}`;
     try {
         // Send the message to the webhook — wrap in { body } so n8n workflow's Switch node can match it
         const response = await axios.post(interactionWebhookUrl, { body: { message } }, {
@@ -290,12 +290,12 @@ app.post('/interact', async (req, res) => {
 
         // Check for async webhook response (onReceived mode)
         if (result && result.message && (result.message.includes('Workflow was started') || result.message.includes('Workflow got started'))) {
-            return res.json({ accepted: true, sessionId, status: 'processing' });
+            return res.json({ accepted: true, requestId, status: 'processing' });
         }
 
         // Check for unused Respond to Webhook warning (legacy after switch to async)
         if (result && result.code === 0 && result.message && result.message.includes('Unused Respond to Webhook')) {
-            return res.json({ accepted: true, sessionId, status: 'processing' });
+            return res.json({ accepted: true, requestId, status: 'processing' });
         }
 
         // Check for nested structure { output: { html: "...", insights: [...] } }

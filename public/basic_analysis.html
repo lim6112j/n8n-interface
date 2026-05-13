@@ -1133,9 +1133,9 @@
 
                 const data = await response.json();
 
-                // Async mode: workflow started, poll for result
+                // Async mode: workflow started, poll for result using server-generated requestId
                 if (data.accepted === true && data.status === 'processing') {
-                    await pollForResult(sessionId, fileName);
+                    await pollForResult(data.requestId, fileName);
                     return;
                 }
 
@@ -1161,9 +1161,9 @@
                 if (!response.ok) throw new Error(`Server returned ${response.status}`);
                 const data = await response.json();
 
-                // Async mode: workflow started, poll for result
+                // Async mode: workflow started, poll for result using server-generated requestId
                 if (data.accepted === true && data.status === 'processing') {
-                    await pollForResult(sessionId);
+                    await pollForResult(data.requestId);
                     return;
                 }
 
