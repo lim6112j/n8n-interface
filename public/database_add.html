@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Database Management - Ciel Mobility AI</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@300;500;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@300;500;600;700&family=Inter:wght@300;400;600&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --neon-cyan: #00f3ff;
@@ -74,7 +77,7 @@
             align-items: center;
             justify-content: space-between;
         }
-        
+
         .sidebar-header a {
             color: #8892b0;
             text-decoration: none;
@@ -97,7 +100,8 @@
             transition: all 0.2s;
         }
 
-        .table-item:hover, .table-item.active {
+        .table-item:hover,
+        .table-item.active {
             background: rgba(0, 243, 255, 0.1);
             color: var(--neon-cyan);
             border-left: 3px solid var(--neon-cyan);
@@ -178,6 +182,7 @@
             background: #d400ff;
             box-shadow: 0 0 15px rgba(189, 0, 255, 0.5);
         }
+
         .add-btn:disabled {
             background: #555;
             cursor: not-allowed;
@@ -240,7 +245,8 @@
             font-size: 14px;
         }
 
-        th, td {
+        th,
+        td {
             padding: 12px 15px;
             text-align: left;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -265,9 +271,10 @@
             position: sticky;
             right: 0;
             background: #09101f;
-            border-left: 1px solid rgba(255,255,255,0.05);
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
             z-index: 1;
         }
+
         th.actions-col {
             z-index: 3;
             background: #0f1c30;
@@ -328,12 +335,21 @@
             font-family: 'Rajdhani', sans-serif;
             display: none;
             z-index: 100;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.8);
         }
-        .status-success { color: #00f3ff; border: 1px solid #00f3ff; }
-        .status-error { color: #ff2a6d; border: 1px solid #ff2a6d; }
+
+        .status-success {
+            color: #00f3ff;
+            border: 1px solid #00f3ff;
+        }
+
+        .status-error {
+            color: #ff2a6d;
+            border: 1px solid #ff2a6d;
+        }
     </style>
 </head>
+
 <body>
 
     <canvas id="matrix-bg"></canvas>
@@ -355,14 +371,19 @@
             <div class="header-actions">
                 <label class="upload-area" id="dropZone">
                     <div class="upload-info">
-                        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        <svg viewBox="0 0 24 24">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
                         <span>Click to select Excel files for bulk upload</span>
                     </div>
                     <div class="file-name" id="fileNameDisplay"></div>
                     <input type="file" id="fileInput" multiple accept=".xlsx, .xls, .csv">
                 </label>
                 <div class="upload-controls">
-                    <input type="text" id="tableNameInput" class="table-name-input" placeholder="Table Name (Optional)">
+                    <input type="text" id="tableNameInput" class="table-name-input"
+                        placeholder="Table Name (lowercase, snake_case, Optional)">
                     <button class="add-btn" id="uploadBtn" disabled>UPLOAD EXCEL</button>
                 </div>
             </div>
@@ -439,8 +460,8 @@
         async function loadTable(tableName, listItem) {
             // Update active state
             document.querySelectorAll('.table-item').forEach(el => el.classList.remove('active'));
-            if(listItem) listItem.classList.add('active');
-            
+            if (listItem) listItem.classList.add('active');
+
             currentTable = tableName;
             document.getElementById('currentTableTitle').textContent = tableName;
             document.getElementById('addRowBtn').style.display = 'block';
@@ -468,11 +489,11 @@
                 html += `<th>${col.column_name}</th>`;
             });
             html += '<th class="actions-col">Actions</th></tr></thead><tbody id="tableBody">';
-            
+
             tableData.forEach(row => {
                 html += createRowHtml(row);
             });
-            
+
             html += '</tbody></table>';
             document.getElementById('tableContainer').innerHTML = html;
         }
@@ -534,7 +555,7 @@
             const tr = btn.closest('tr');
             const inputs = tr.querySelectorAll('.edit-input');
             const rowData = {};
-            
+
             inputs.forEach(input => {
                 rowData[input.getAttribute('data-col')] = input.value;
             });
@@ -574,7 +595,7 @@
         };
 
         window.deleteRow = async (id) => {
-            if(!id) return showStatus('Cannot delete row without ID', true);
+            if (!id) return showStatus('Cannot delete row without ID', true);
             if (!confirm('Are you sure you want to delete this row?')) return;
 
             try {
@@ -620,17 +641,17 @@
 
         uploadBtn.addEventListener('click', async () => {
             if (!fileInput.files.length) return;
-            
+
             const formData = new FormData();
             for (let i = 0; i < fileInput.files.length; i++) {
                 formData.append(`file${i}`, fileInput.files[i]);
             }
-            
+
             const tableName = document.getElementById('tableNameInput').value.trim();
             if (tableName) {
                 formData.append('tableName', tableName);
             }
-            
+
             uploadBtn.disabled = true;
             uploadBtn.textContent = 'UPLOADING...';
 
@@ -644,7 +665,7 @@
                     method: 'POST',
                     body: formData
                 });
-                
+
                 if (response.ok) {
                     showStatus('Successfully added to database!');
                     fileInput.value = '';
@@ -667,4 +688,5 @@
         fetchTables();
     </script>
 </body>
+
 </html>
