@@ -390,7 +390,13 @@
 
             <div class="table-header">
                 <div class="table-title" id="currentTableTitle">Select a table</div>
-                <button class="btn" id="addRowBtn" style="display: none;">+ Add Row</button>
+                <div style="display: flex; gap: 10px; align-items: center;" id="filterControls">
+                    <select id="filterCol" style="background: rgba(0, 0, 0, 0.5); border: 1px solid var(--neon-cyan); color: white; padding: 6px; border-radius: 4px; display: none; font-family: 'Inter', sans-serif;">
+                    </select>
+                    <input type="text" id="filterVal" placeholder="Search..." style="background: rgba(0, 0, 0, 0.5); border: 1px solid var(--neon-cyan); color: white; padding: 6px; border-radius: 4px; display: none; font-family: 'Inter', sans-serif;">
+                    <button class="btn" id="filterBtn" style="display: none;">Filter</button>
+                    <button class="btn" id="addRowBtn" style="display: none;">+ Add Row</button>
+                </div>
             </div>
 
             <div class="data-container">
@@ -430,6 +436,10 @@
         let currentTable = null;
         let tableColumns = [];
         let tableData = [];
+        let currentOffset = 0;
+        let isFetching = false;
+        let hasMore = true;
+        const LIMIT = 50;
 
         function showStatus(msg, isError = false) {
             const el = document.getElementById('statusMessage');
@@ -457,24 +467,69 @@
             }
         }
 
-        async function loadTable(tableName, listItem) {
-            // Update active state
-            document.querySelectorAll('.table-item').forEach(el => el.classList.remove('active'));
-            if (listItem) listItem.classList.add('active');
+        async function loadTable(tableName, listItem, append = false) {
+            if (!append) {
+                if (listItem) {
+                    document.querySelectorAll('.table-item').forEach(el => el.classList.remove('active'));
+                    listItem.classList.add('active');
+                }
 
-            currentTable = tableName;
-            document.getElementById('currentTableTitle').textContent = tableName;
-            document.getElementById('addRowBtn').style.display = 'block';
-            document.getElementById('tableContainer').innerHTML = '<div class="empty-state">Loading...</div>';
+                currentTable = tableName;
+                document.getElementById('currentTableTitle').textContent = tableName;
+                document.getElementById('addRowBtn').style.display = 'block';
+                document.getElementById('filterCol').style.display = 'block';
+                document.getElementById('filterVal').style.display = 'block';
+                document.getElementById('filterBtn').style.display = 'block';
+                document.getElementById('tableContainer').innerHTML = '<div class="empty-state">Loading...</div>';
+                
+                currentOffset = 0;
+                hasMore = true;
+            }
+
+            if (isFetching || !hasMore) return;
+            isFetching = true;
+
+            const filterCol = document.getElementById('filterCol').value;
+            const filterVal = document.getElementById('filterVal').value;
 
             try {
-                const res = await fetch(`/api/db/tables/${tableName}`);
+                let url = `/api/db/tables/${tableName}?limit=${LIMIT}&offset=${currentOffset}`;
+                if (filterCol && filterVal) {
+                    url += `&filterCol=${encodeURIComponent(filterCol)}&filterVal=${encodeURIComponent(filterVal)}`;
+                }
+
+                const res = await fetch(url);
                 const data = await res.json();
+                
                 tableColumns = data.columns;
-                tableData = data.data;
-                renderTable();
+                
+                if (!append) {
+                    const filterColSelect = document.getElementById('filterCol');
+                    if (!filterColSelect.value) {
+                        let optionsHtml = '<option value="">-- Select Column --</option>';
+                        tableColumns.forEach(col => {
+                            optionsHtml += `<option value="${col.column_name}" ${filterCol === col.column_name ? 'selected' : ''}>${col.column_name}</option>`;
+                        });
+                        filterColSelect.innerHTML = optionsHtml;
+                    }
+                    tableData = data.data;
+                    renderTable();
+                } else {
+                    if (data.data.length > 0) {
+                        tableData = tableData.concat(data.data);
+                        appendRows(data.data);
+                    }
+                }
+
+                if (data.data.length < LIMIT) {
+                    hasMore = false;
+                }
+                currentOffset += data.data.length;
+
             } catch (err) {
                 showStatus('Error loading table data', true);
+            } finally {
+                isFetching = false;
             }
         }
 
@@ -497,6 +552,30 @@
             html += '</tbody></table>';
             document.getElementById('tableContainer').innerHTML = html;
         }
+
+        function appendRows(rows) {
+            const tbody = document.getElementById('tableBody');
+            if (!tbody) return;
+            let html = '';
+            rows.forEach(row => {
+                html += createRowHtml(row);
+            });
+            tbody.insertAdjacentHTML('beforeend', html);
+        }
+
+        document.getElementById('filterBtn').onclick = () => {
+            if (currentTable) {
+                loadTable(currentTable, null, false);
+            }
+        };
+
+        document.querySelector('.data-container').addEventListener('scroll', function() {
+            if (this.scrollTop + this.clientHeight >= this.scrollHeight - 50) {
+                if (currentTable && hasMore && !isFetching) {
+                    loadTable(currentTable, null, true);
+                }
+            }
+        });
 
         function createRowHtml(row, isEdit = false) {
             let html = `<tr data-id="${row.id || ''}">`;

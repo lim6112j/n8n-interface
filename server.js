@@ -266,6 +266,8 @@ app.get('/api/db/tables', async (req, res) => {
 // Get table data
 app.get('/api/db/tables/:tableName', async (req, res) => {
     const { tableName } = req.params;
+    const { offset = 0, limit = 50, filterCol, filterVal } = req.query;
+    
     if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {
         return res.status(400).json({ error: 'Invalid table name' });
     }
@@ -278,14 +280,27 @@ app.get('/api/db/tables/:tableName', async (req, res) => {
             ORDER BY ordinal_position ASC;
         `;
         const colResult = await pool.query(colQuery, [tableName]);
+        const validColumns = colResult.rows.map(c => c.column_name);
         
-        let dataQuery = `SELECT * FROM "${tableName}" LIMIT 1000;`;
-        // Try to order by id if it exists
-        if (colResult.rows.some(col => col.column_name === 'id')) {
-            dataQuery = `SELECT * FROM "${tableName}" ORDER BY id ASC LIMIT 1000;`;
+        let queryParams = [];
+        let whereClause = '';
+        
+        if (filterCol && filterVal && validColumns.includes(filterCol)) {
+            whereClause = `WHERE "${filterCol}"::text ILIKE $1`;
+            queryParams.push(`%${filterVal}%`);
         }
         
-        const dataResult = await pool.query(dataQuery);
+        let orderClause = '';
+        if (validColumns.includes('id')) {
+            orderClause = 'ORDER BY id ASC';
+        }
+
+        queryParams.push(limit);
+        queryParams.push(offset);
+        const limitOffsetStr = `LIMIT $${queryParams.length - 1} OFFSET $${queryParams.length}`;
+
+        const dataQuery = `SELECT * FROM "${tableName}" ${whereClause} ${orderClause} ${limitOffsetStr};`;
+        const dataResult = await pool.query(dataQuery, queryParams);
         
         res.json({ 
             columns: colResult.rows,
