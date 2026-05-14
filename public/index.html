@@ -160,10 +160,8 @@
     <div class="container">
         <div class="logo">Ciel Mobility AI</div>
 
-        <div class="button-group">
-            <a href="basic_analysis.html" class="nav-btn">기본물류분석</a>
-            <a href="basic_analysis.html" class="nav-btn secondary">주류분석</a>
-            <a href="admin.html" class="nav-btn secondary">Admin Page (관리자)</a>
+        <div class="button-group" id="main-buttons">
+            <div style="text-align: center; color: var(--neon-cyan);">Loading...</div>
         </div>
     </div>
 
@@ -191,6 +189,46 @@
         }
         setInterval(matrix, 50);
         window.addEventListener('resize', () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; });
+
+        // Auth Logic
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/current-user');
+                const data = await res.json();
+                const btnGroup = document.getElementById('main-buttons');
+                
+                if (data.authenticated) {
+                    const user = data.user;
+                    let html = `
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <p style="color: var(--neon-cyan); font-weight: 600; font-size: 1.2em;">Welcome, ${user.name}</p>
+                            <p style="font-size: 0.9em; opacity: 0.8; margin-top: 5px;">Role: ${user.role.toUpperCase()}</p>
+                        </div>
+                        <a href="basic_analysis.html" class="nav-btn">기본물류분석</a>
+                        <a href="basic_analysis.html" class="nav-btn secondary">주류분석</a>
+                    `;
+                    if (user.role === 'admin' || user.role === 'superuser') {
+                        html += `<a href="admin.html" class="nav-btn secondary">Admin Page (관리자)</a>`;
+                    }
+                    html += `<button onclick="logout()" class="nav-btn secondary" style="margin-top: 20px; border-color: var(--danger); color: var(--danger); cursor: pointer; background: transparent;">Logout</button>`;
+                    btnGroup.innerHTML = html;
+                } else {
+                    btnGroup.innerHTML = `
+                        <p style="text-align: center; margin-bottom: 20px; color: #aaa;">Please log in to continue</p>
+                        <a href="/auth/google" class="nav-btn">Login with Google</a>
+                    `;
+                }
+            } catch (err) {
+                console.error('Auth check error:', err);
+            }
+        }
+        
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.reload();
+        }
+        
+        checkAuth();
     </script>
 </body>
 

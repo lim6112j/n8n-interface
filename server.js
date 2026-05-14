@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
 const axios = require('axios');
@@ -7,6 +8,10 @@ const path = require('path');
 const http = require('http');
 const https = require('https');
 const { Pool } = require('pg');
+const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
 const pool = new Pool({
     user: 'mobble_ai',
@@ -15,6 +20,40 @@ const pool = new Pool({
     password: 'ciel@105',
     port: 5432,
 });
+
+// Initialize database schema for users and sessions
+async function initDb() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS "session" (
+                "sid" varchar NOT NULL COLLATE "default",
+                "sess" json NOT NULL,
+                "expire" timestamp(6) NOT NULL
+            ) WITH (OIDS=FALSE);
+            
+            ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
+            CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+        `).catch(e => {
+            // Ignore error if constraint already exists
+            if (e.code !== '42P07') console.error('Session table init error:', e);
+        });
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                google_id VARCHAR(255) UNIQUE NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                name VARCHAR(255),
+                role VARCHAR(50) DEFAULT 'user',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        console.log('Database tables initialized successfully');
+    } catch (error) {
+        console.error('Database initialization error:', error);
+    }
+}
+initDb();
 
 const app = express();
 const port = 3000;
@@ -33,6 +72,134 @@ const httpsAgent = new https.Agent({
 });
 
 app.use(express.json()); // Parse JSON bodies — MUST be before routes that need body parsing
+
+// Configure session
+app.use(session({
+    store: new pgSession({
+        pool: pool,
+        tableName: 'session'
+    }),
+    secret: process.env.SESSION_SECRET || 'fallback_secret_for_development',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 } // 30 days
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Passport serialization
+passport.serializeUser((user, done) => {
+    done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+    try {
+        const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+        if (result.rows.length > 0) {
+            done(null, result.rows[0]);
+        } else {
+            done(null, false);
+        }
+    } catch (err) {
+        done(err);
+    }
+});
+
+// Passport Google Strategy
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: "/auth/google/callback"
+  },
+  async function(accessToken, refreshToken, profile, cb) {
+    try {
+        const googleId = profile.id;
+        const email = profile.emails && profile.emails.length > 0 ? profile.emails[0].value : null;
+        const name = profile.displayName;
+
+        let result = await pool.query('SELECT * FROM users WHERE google_id = $1', [googleId]);
+        
+        if (result.rows.length === 0) {
+            // New user registration
+            let role = 'user';
+            const superuserEmails = process.env.SUPERUSER_EMAILS ? process.env.SUPERUSER_EMAILS.split(',').map(e => e.trim()) : [];
+            if (email && superuserEmails.includes(email)) {
+                role = 'superuser';
+            }
+            const insertResult = await pool.query(
+                'INSERT INTO users (google_id, email, name, role) VALUES ($1, $2, $3, $4) RETURNING *',
+                [googleId, email, name, role]
+            );
+            return cb(null, insertResult.rows[0]);
+        } else {
+            // Existing user
+            return cb(null, result.rows[0]);
+        }
+    } catch (err) {
+        return cb(err);
+    }
+  }
+));
+
+// Auth Routes
+app.get('/auth/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+app.get('/auth/google/callback', 
+  passport.authenticate('google', { failureRedirect: '/' }),
+  function(req, res) {
+    // Successful authentication, redirect to home.
+    res.redirect('/');
+  });
+
+app.get('/api/current-user', (req, res) => {
+    if (req.isAuthenticated()) {
+        res.json({ authenticated: true, user: req.user });
+    } else {
+        res.json({ authenticated: false });
+    }
+});
+
+app.post('/api/logout', (req, res, next) => {
+    req.logout((err) => {
+        if (err) { return next(err); }
+        res.json({ success: true });
+    });
+});
+
+// User Management Routes (Superuser only)
+app.get('/api/users', async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== 'superuser') {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    try {
+        const result = await pool.query('SELECT id, email, name, role, created_at FROM users ORDER BY created_at DESC');
+        res.json({ users: result.rows });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/users/:id/role', async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== 'superuser') {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    const { role } = req.body;
+    if (!['user', 'admin', 'superuser'].includes(role)) {
+        return res.status(400).json({ error: 'Invalid role' });
+    }
+    try {
+        const result = await pool.query('UPDATE users SET role = $1 WHERE id = $2 RETURNING id, email, name, role', [role, req.params.id]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json({ success: true, user: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // In-memory store for async callback results (sessionId → { html, insights, receivedAt })
 const callbackStore = new Map();
@@ -57,6 +224,20 @@ app.get('/status/:sessionId', (req, res) => {
         return res.json({ status: 'pending' });
     }
     res.json({ status: 'completed', html: result.html, insights: result.insights });
+});
+
+// Protect HTML files except index.html
+app.use((req, res, next) => {
+    if (req.path.endsWith('.html') && req.path !== '/index.html' && req.path !== '/') {
+        if (!req.isAuthenticated()) {
+            return res.redirect('/');
+        }
+        // Specific check for admin.html
+        if (req.path === '/admin.html' && req.user.role === 'user') {
+            return res.redirect('/');
+        }
+    }
+    next();
 });
 
 // Serve static files from the public directory

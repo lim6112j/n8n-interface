@@ -165,6 +165,13 @@
             <a href="database_add.html" class="nav-btn secondary">데이터베이스 추가(POSTGRES)</a>
             <a href="index.html" class="nav-btn secondary" style="margin-top: 20px;">뒤로 가기 (Back)</a>
         </div>
+        
+        <div id="user-management-section" style="display: none; width: 100%; margin-top: 40px; border-top: 1px solid rgba(0, 243, 255, 0.2); padding-top: 20px;">
+            <h3 style="color: var(--neon-cyan); margin-bottom: 15px; text-align: center;">User Management</h3>
+            <div id="user-list" style="max-height: 300px; overflow-y: auto; width: 100%;">
+                <div style="text-align: center; color: #aaa;">Loading users...</div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -191,6 +198,83 @@
         }
         setInterval(matrix, 50);
         window.addEventListener('resize', () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; });
+
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/users');
+                if (res.ok) {
+                    const data = await res.json();
+                    const userList = document.getElementById('user-list');
+                    let html = '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">';
+                    html += `
+                        <tr>
+                            <th style="text-align: left; padding: 8px; border-bottom: 1px solid #444;">Name</th>
+                            <th style="text-align: left; padding: 8px; border-bottom: 1px solid #444;">Email</th>
+                            <th style="text-align: left; padding: 8px; border-bottom: 1px solid #444;">Role</th>
+                            <th style="text-align: left; padding: 8px; border-bottom: 1px solid #444;">Action</th>
+                        </tr>
+                    `;
+                    data.users.forEach(u => {
+                        html += `
+                            <tr>
+                                <td style="padding: 8px; border-bottom: 1px solid #333;">${u.name || 'Unknown'}</td>
+                                <td style="padding: 8px; border-bottom: 1px solid #333; max-width: 150px; overflow: hidden; text-overflow: ellipsis;" title="${u.email}">${u.email}</td>
+                                <td style="padding: 8px; border-bottom: 1px solid #333;">
+                                    <select id="role-${u.id}" style="background: #111; color: #fff; border: 1px solid #444; padding: 4px; border-radius: 4px; width: 100%;">
+                                        <option value="user" ${u.role === 'user' ? 'selected' : ''}>User</option>
+                                        <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                        <option value="superuser" ${u.role === 'superuser' ? 'selected' : ''}>Superuser</option>
+                                    </select>
+                                </td>
+                                <td style="padding: 8px; border-bottom: 1px solid #333;">
+                                    <button onclick="updateRole(${u.id})" style="background: rgba(0,243,255,0.1); color: var(--neon-cyan); border: 1px solid var(--neon-cyan); padding: 4px 8px; border-radius: 4px; cursor: pointer; width: 100%;">Save</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    html += '</table>';
+                    userList.innerHTML = html;
+                }
+            } catch (err) {
+                console.error('Failed to load users:', err);
+            }
+        }
+
+        async function updateRole(userId) {
+            const role = document.getElementById(`role-${userId}`).value;
+            try {
+                const res = await fetch(`/api/users/${userId}/role`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role })
+                });
+                if (res.ok) {
+                    alert('Role updated successfully');
+                } else {
+                    alert('Failed to update role');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error updating role');
+            }
+        }
+
+        async function initAdmin() {
+            try {
+                const res = await fetch('/api/current-user');
+                const data = await res.json();
+                if (data.authenticated && data.user.role === 'superuser') {
+                    document.getElementById('user-management-section').style.display = 'block';
+                    // Allow container to expand
+                    document.querySelector('.container').style.maxWidth = '700px';
+                    loadUsers();
+                }
+            } catch (err) {
+                console.error('Auth error', err);
+            }
+        }
+
+        initAdmin();
     </script>
 </body>
 
