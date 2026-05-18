@@ -735,7 +735,19 @@
             uploadBtn.textContent = 'UPLOADING...';
 
             try {
-                let webhookUrl = `http://localhost:5678/webhook/xlsx-multi-to-pg?sessionId=${sessionId}`;
+                const requestId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+                let userId = 'anonymous';
+                try {
+                    const userRes = await fetch('/api/current-user');
+                    const userData = await userRes.json();
+                    if (userData.authenticated) {
+                        userId = userData.user.id;
+                    }
+                } catch (e) {
+                    console.warn('Could not fetch user ID:', e);
+                }
+
+                let webhookUrl = `http://localhost:5678/webhook/xlsx-multi-to-pg?sessionId=${sessionId}&requestId=${requestId}&userId=${userId}`;
                 if (tableName) {
                     webhookUrl += `&tableName=${encodeURIComponent(tableName)}`;
                 }
