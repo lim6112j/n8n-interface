@@ -1,0 +1,141 @@
+{
+  "name": "summarize_excel",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "summarize-excel",
+        "responseMode": "onReceived",
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "id": "webhook-node-id",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [250, 300],
+      "webhookId": "summarize-excel-webhook"
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "options": {}
+      },
+      "id": "extract-node-id",
+      "name": "Extract from File",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.first().json.data || [];\n\nconst mapped = rows.map((row) => {\n  return {\n    json: {\n      vehicle_id: row['vehicle_id'] ?? row['차량ID'] ?? row['vehicle'] ?? null,\n      date: row['date'] ?? row['날짜'] ?? row['일자'] ?? null,\n      location_type: row['location_type'] ?? row['장소유형'] ?? row['위치유형'] ?? null,\n      customer_id: row['customer_id'] ?? row['거래처ID'] ?? row['고객ID'] ?? null,\n      longitude: parseFloat(row['longitude'] ?? row['경도'] ?? row['lon'] ?? 0),\n      latitude: parseFloat(row['latitude'] ?? row['위도'] ?? row['lat'] ?? 0),\n      alocated_order_num: parseInt(row['alocated_order_num'] ?? row['할당주문수'] ?? row['배정주문'] ?? 0, 10),\n      travel_order: parseInt(row['travel_order'] ?? row['이동차수'] ?? row['경유순서'] ?? 0, 10),\n      delivery_cbm: parseFloat(row['delivery_cbm'] ?? row['배송CBM'] ?? row['적재CBM'] ?? 0),\n      distance: parseFloat(row['distance'] ?? row['거리'] ?? row['이동거리'] ?? 0),\n      running_time: parseFloat(row['running_time'] ?? row['운행시간'] ?? row['소요시간'] ?? 0)\n    }\n  };\n});\n\nreturn mapped;"
+      },
+      "id": "map-node-id",
+      "name": "Map to Schema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS summarize_excel (\n  id SERIAL PRIMARY KEY,\n  vehicle_id VARCHAR(50),\n  date DATE,\n  location_type VARCHAR(50),\n  customer_id VARCHAR(50),\n  longitude NUMERIC(12,8),\n  latitude NUMERIC(12,8),\n  alocated_order_num INTEGER,\n  travel_order INTEGER,\n  delivery_cbm NUMERIC(10,4),\n  distance NUMERIC(12,4),\n  running_time NUMERIC(10,2),\n  created_at TIMESTAMP DEFAULT NOW()\n);",
+        "options": {}
+      },
+      "id": "create-table-node-id",
+      "name": "Create Table",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [850, 200],
+      "credentials": {
+        "postgres": {
+          "id": "PG-LOCALHOST-5432",
+          "name": "Postgres localhost:5432"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": "public",
+        "table": "summarize_excel",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "vehicle_id": "={{ $json.vehicle_id }}",
+            "date": "={{ $json.date ? new Date($json.date).toISOString().split('T')[0] : null }}",
+            "location_type": "={{ $json.location_type }}",
+            "customer_id": "={{ $json.customer_id }}",
+            "longitude": "={{ $json.longitude }}",
+            "latitude": "={{ $json.latitude }}",
+            "alocated_order_num": "={{ $json.alocated_order_num }}",
+            "travel_order": "={{ $json.travel_order }}",
+            "delivery_cbm": "={{ $json.delivery_cbm }}",
+            "distance": "={{ $json.distance }}",
+            "running_time": "={{ $json.running_time }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "insert-node-id",
+      "name": "Insert into Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [850, 400],
+      "credentials": {
+        "postgres": {
+          "id": "PG-LOCALHOST-5432",
+          "name": "Postgres localhost:5432"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Map to Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map to Schema": {
+      "main": [
+        [
+          {
+            "node": "Create Table",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Insert into Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "tags": [],
+  "pinData": {}
+}
