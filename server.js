@@ -202,25 +202,26 @@ app.put('/api/users/:id/role', async (req, res) => {
     }
 });
 
-// In-memory store for async callback results (sessionId → { html, insights, receivedAt })
+// In-memory store for async callback results (requestId → { html, insights, receivedAt })
 const callbackStore = new Map();
 
 // Callback endpoint for n8n async workflows
 app.post('/callback', (req, res) => {
-    const { sessionId, html, insights } = req.body;
-    if (!sessionId) {
-        return res.status(400).json({ error: 'sessionId required' });
+    const targetId = req.body.requestId || req.body.sessionId;
+    const { html, insights } = req.body;
+    if (!targetId) {
+        return res.status(400).json({ error: 'requestId required' });
     }
-    callbackStore.set(sessionId, { html, insights, receivedAt: new Date().toISOString() });
-    console.log(`[callback] Received result for sessionId=${sessionId}`);
+    callbackStore.set(targetId, { html, insights, receivedAt: new Date().toISOString() });
+    console.log(`[callback] Received result for requestId=${targetId}`);
     // Auto-cleanup after 10 minutes
-    setTimeout(() => callbackStore.delete(sessionId), 10 * 60 * 1000);
+    setTimeout(() => callbackStore.delete(targetId), 10 * 60 * 1000);
     res.json({ success: true });
 });
 
 // Status endpoint for frontend polling
-app.get('/status/:sessionId', (req, res) => {
-    const result = callbackStore.get(req.params.sessionId);
+app.get('/status/:requestId', (req, res) => {
+    const result = callbackStore.get(req.params.requestId);
     if (!result) {
         return res.json({ status: 'pending' });
     }

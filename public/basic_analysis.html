@@ -1056,7 +1056,7 @@
             }
         }
 
-        async function pollForResult(sessionId, fileName = null) {
+        async function pollForResult(requestId, fileName = null) {
             const POLL_INTERVAL = 3000; // 3 seconds
             const MAX_ATTEMPTS = 200;   // ~10 minutes max
             let attempts = 0;
@@ -1064,7 +1064,7 @@
             const poll = async () => {
                 attempts++;
                 try {
-                    const response = await fetch(`/status/${sessionId}`);
+                    const response = await fetch(`/status/${requestId}`);
                     if (!response.ok) throw new Error(`Status check returned ${response.status}`);
                     const data = await response.json();
 
