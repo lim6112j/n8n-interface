@@ -247,16 +247,31 @@ app.use(express.static('public'));
 
 // --- Database API Endpoints ---
 
+// Middleware to protect API routes and set schema
+const requireDbAuth = (req, res, next) => {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    req.dbSchema = String(req.user.id);
+    next();
+};
+
+app.use('/api/db', requireDbAuth);
+
 // Get all user-defined tables
 app.get('/api/db/tables', async (req, res) => {
     try {
+        const schema = req.dbSchema;
+        // Ensure schema exists
+        await pool.query(`CREATE SCHEMA IF NOT EXISTS "${schema}";`);
+
         const query = `
             SELECT tablename 
             FROM pg_catalog.pg_tables 
-            WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema'
+            WHERE schemaname = $1
             ORDER BY tablename ASC;
         `;
-        const result = await pool.query(query);
+        const result = await pool.query(query, [schema]);
         res.json({ tables: result.rows.map(row => row.tablename) });
     } catch (error) {
         console.error('Error fetching tables:', error);
@@ -267,6 +282,7 @@ app.get('/api/db/tables', async (req, res) => {
 // Get table data
 app.get('/api/db/tables/:tableName', async (req, res) => {
     const { tableName } = req.params;
+    const schema = req.dbSchema;
     const { offset = 0, limit = 50, filterCol, filterVal } = req.query;
     
     if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {
@@ -277,10 +293,10 @@ app.get('/api/db/tables/:tableName', async (req, res) => {
         const colQuery = `
             SELECT column_name, data_type 
             FROM information_schema.columns 
-            WHERE table_name = $1
+            WHERE table_schema = $1 AND table_name = $2
             ORDER BY ordinal_position ASC;
         `;
-        const colResult = await pool.query(colQuery, [tableName]);
+        const colResult = await pool.query(colQuery, [schema, tableName]);
         const validColumns = colResult.rows.map(c => c.column_name);
         
         let queryParams = [];
@@ -300,7 +316,7 @@ app.get('/api/db/tables/:tableName', async (req, res) => {
         queryParams.push(offset);
         const limitOffsetStr = `LIMIT $${queryParams.length - 1} OFFSET $${queryParams.length}`;
 
-        const dataQuery = `SELECT * FROM "${tableName}" ${whereClause} ${orderClause} ${limitOffsetStr};`;
+        const dataQuery = `SELECT * FROM "${schema}"."${tableName}" ${whereClause} ${orderClause} ${limitOffsetStr};`;
         const dataResult = await pool.query(dataQuery, queryParams);
         
         res.json({ 
@@ -316,6 +332,7 @@ app.get('/api/db/tables/:tableName', async (req, res) => {
 // Add new row
 app.post('/api/db/tables/:tableName', async (req, res) => {
     const { tableName } = req.params;
+    const schema = req.dbSchema;
     if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {
         return res.status(400).json({ error: 'Invalid table name' });
     }
@@ -330,7 +347,7 @@ app.post('/api/db/tables/:tableName', async (req, res) => {
              return res.status(400).json({ error: 'No data provided' });
         }
 
-        const query = `INSERT INTO "${tableName}" ("${columns.join('", "')}") VALUES (${placeholders.join(', ')}) RETURNING *`;
+        const query = `INSERT INTO "${schema}"."${tableName}" ("${columns.join('", "')}") VALUES (${placeholders.join(', ')}) RETURNING *`;
         const result = await pool.query(query, values);
         res.json({ success: true, row: result.rows[0] });
     } catch (error) {
@@ -342,6 +359,7 @@ app.post('/api/db/tables/:tableName', async (req, res) => {
 // Update row
 app.put('/api/db/tables/:tableName/:id', async (req, res) => {
     const { tableName, id } = req.params;
+    const schema = req.dbSchema;
     if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {
         return res.status(400).json({ error: 'Invalid table name' });
     }
@@ -353,7 +371,7 @@ app.put('/api/db/tables/:tableName/:id', async (req, res) => {
         const setClause = columns.map((col, i) => `"${col}" = $${i + 1}`).join(', ');
         
         values.push(id);
-        const query = `UPDATE "${tableName}" SET ${setClause} WHERE id = $${values.length} RETURNING *`;
+        const query = `UPDATE "${schema}"."${tableName}" SET ${setClause} WHERE id = $${values.length} RETURNING *`;
         
         const result = await pool.query(query, values);
         if (result.rowCount === 0) {
@@ -369,11 +387,12 @@ app.put('/api/db/tables/:tableName/:id', async (req, res) => {
 // Delete row
 app.delete('/api/db/tables/:tableName/:id', async (req, res) => {
     const { tableName, id } = req.params;
+    const schema = req.dbSchema;
     if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {
         return res.status(400).json({ error: 'Invalid table name' });
     }
     try {
-        const query = `DELETE FROM "${tableName}" WHERE id = $1 RETURNING *`;
+        const query = `DELETE FROM "${schema}"."${tableName}" WHERE id = $1 RETURNING *`;
         const result = await pool.query(query, [id]);
         if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Row not found' });
