@@ -1058,7 +1058,7 @@
 
         async function pollForResult(requestId, fileName = null) {
             const POLL_INTERVAL = 3000; // 3 seconds
-            const MAX_ATTEMPTS = 200;   // ~10 minutes max
+            const MAX_ATTEMPTS = 400;   // ~10 minutes max
             let attempts = 0;
 
             const poll = async () => {
