@@ -210,6 +210,14 @@
             box-sizing: border-box;
         }
 
+        .report-wrapper {
+            position: relative;
+            width: 100%;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
         .report-frame {
             width: 100%;
             min-height: 600px;
@@ -217,12 +225,40 @@
             border: none;
             border-radius: 8px;
             background: transparent;
-            flex-shrink: 0;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         .report-frame.has-bg {
             background: #fff;
+        }
+
+        .print-btn {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 10;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .print-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        .print-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
         }
 
         /* Chat Pane */
@@ -1124,11 +1160,27 @@
             setTimeout(() => { welcomeScreen.style.display = 'none'; }, 500);
 
             if (data.html) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'report-wrapper';
+
+                const printBtn = document.createElement('button');
+                printBtn.className = 'print-btn';
+                printBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg> Print PDF';
+
                 const newIframe = document.createElement('iframe');
-                newIframe.sandbox = "allow-scripts allow-same-origin";
+                newIframe.sandbox = "allow-scripts allow-same-origin allow-modals";
                 newIframe.className = "report-frame has-bg";
                 newIframe.srcdoc = data.html;
-                reportsContainer.appendChild(newIframe);
+
+                printBtn.onclick = () => {
+                    if (newIframe.contentWindow) {
+                        newIframe.contentWindow.print();
+                    }
+                };
+
+                wrapper.appendChild(printBtn);
+                wrapper.appendChild(newIframe);
+                reportsContainer.appendChild(wrapper);
 
                 // Scroll to the new report
                 setTimeout(() => {
