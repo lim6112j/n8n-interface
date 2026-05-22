@@ -212,12 +212,13 @@
 
         .report-frame {
             width: 100%;
-            min-height: 600px; /* Minimum height for each report */
+            min-height: 600px;
+            /* Minimum height for each report */
             border: none;
             border-radius: 8px;
             background: transparent;
             flex-shrink: 0;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         .report-frame.has-bg {
@@ -887,7 +888,8 @@
             <div class="chat-messages" id="chatMessages">
                 <div class="msg-container ai">
                     <div class="msg-sender">System</div>
-                    <div class="msg-bubble">Agent connection established. Awaiting dataset or command.</div>
+                    <div class="msg-bubble">Agent connection established. Awaiting dataset and command.(분석해줘, 지도에 표시해줘
+                        등)</div>
                 </div>
             </div>
 
@@ -1127,7 +1129,7 @@
                 newIframe.className = "report-frame has-bg";
                 newIframe.srcdoc = data.html;
                 reportsContainer.appendChild(newIframe);
-                
+
                 // Scroll to the new report
                 setTimeout(() => {
                     reportsContainer.scrollTop = reportsContainer.scrollHeight;
