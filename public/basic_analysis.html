@@ -951,7 +951,7 @@
                             </path>
                         </svg>
                     </label>
-                    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" style="display: none;">
+                    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" style="display: none;" multiple>
 
                     <input type="text" id="chatInput" class="chat-input" placeholder="Message or upload data..."
                         autocomplete="off">
@@ -1024,7 +1024,11 @@
 
         fileInput.addEventListener('change', () => {
             if (fileInput.files.length > 0) {
-                fileName.textContent = fileInput.files[0].name;
+                if (fileInput.files.length === 1) {
+                    fileName.textContent = fileInput.files[0].name;
+                } else {
+                    fileName.textContent = `${fileInput.files.length} files selected`;
+                }
                 fileIndicator.style.display = 'flex';
                 updateSendButtonState();
             }
@@ -1071,19 +1075,22 @@
 
             // UI Feedback
             if (hasFile) {
-                const file = fileInput.files[0];
-                addMessage('user', `📎 Attached dataset: <b>${file.name}</b><br/>${text}`);
+                const files = fileInput.files;
+                let fileNames = Array.from(files).map(f => f.name).join(', ');
+                addMessage('user', `📎 Attached datasets: <b>${fileNames}</b><br/>${text}`);
 
                 // Clear inputs
                 const formData = new FormData();
-                formData.append('file', file);
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('file', files[i]);
+                }
 
                 fileInput.value = '';
                 fileIndicator.style.display = 'none';
                 chatInput.value = '';
                 updateSendButtonState();
 
-                await processUpload(formData, file.name);
+                await processUpload(formData, fileNames);
             } else {
                 addMessage('user', text);
                 chatInput.value = '';

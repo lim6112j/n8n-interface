@@ -404,23 +404,23 @@ app.delete('/api/db/tables/:tableName/:id', async (req, res) => {
     }
 });
 
-app.post('/upload', upload.single('file'), async (req, res) => {
-    if (!req.file) {
+app.post('/upload', upload.array('file'), async (req, res) => {
+    if (!req.files || req.files.length === 0) {
         return res.status(400).send('No file uploaded.');
     }
 
-    const filePath = req.file.path;
-    const originalName = req.file.originalname;
-    // Determine the content type based on the file extension or mimetype
-    const contentType = req.file.mimetype === 'text/csv' ? 'text/csv' :
-        (req.file.mimetype === 'application/vnd.ms-excel' ? 'application/vnd.ms-excel' :
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-
     try {
         const formData = new FormData();
-        formData.append('file', fs.createReadStream(filePath), {
-            filename: originalName,
-            contentType: contentType // Dynamic content type
+        req.files.forEach((file, index) => {
+            const contentType = file.mimetype === 'text/csv' ? 'text/csv' :
+                (file.mimetype === 'application/vnd.ms-excel' ? 'application/vnd.ms-excel' :
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            
+            const key = req.files.length === 1 ? 'file' : `file${index}`;
+            formData.append(key, fs.createReadStream(file.path), {
+                filename: file.originalname,
+                contentType: contentType
+            });
         });
 
         // Generate unique requestId for this specific request so upload and interact don't share callback store keys
@@ -428,15 +428,12 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         const userId = req.user ? req.user.id : 'anonymous';
         const requestId = crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).substr(2, 9);
         const webhookUrl = `http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991?sessionId=${sessionId}&requestId=${requestId}&userId=${userId}`;
-        const fileBuffer = fs.readFileSync(filePath);
 
         // Increase timeout to 15 minutes (900000 ms) as requested
         const TIMEOUT_MS = 900000;
 
-        const response = await axios.post(webhookUrl, fileBuffer, {
-            headers: {
-                'Content-Type': contentType
-            },
+        const response = await axios.post(webhookUrl, formData, {
+            headers: formData.getHeaders(),
             timeout: TIMEOUT_MS,
             httpAgent: httpAgent,
             httpsAgent: httpsAgent,
@@ -477,9 +474,13 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         console.error('Error forwarding file:', error.message);
         res.status(500).json({ error: 'Failed to forward file to webhook', details: error.message });
     } finally {
-        // Clean up the uploaded file from local storage
-        if (filePath && fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
+        // Clean up the uploaded files from local storage
+        if (req.files) {
+            req.files.forEach(file => {
+                if (file.path && fs.existsSync(file.path)) {
+                    fs.unlinkSync(file.path);
+                }
+            });
         }
     }
 });
