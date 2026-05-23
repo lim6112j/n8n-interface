@@ -58,6 +58,17 @@ initDb();
 const app = express();
 const port = 3000;
 
+// Debug logging middleware for /upload to check if the request even reaches Express
+app.use('/upload', (req, res, next) => {
+    console.log(`[DEBUG] Incoming /upload request. Content-Length: ${req.headers['content-length']}`);
+    const originalSend = res.send;
+    res.send = function (data) {
+        console.log(`[DEBUG] Outgoing /upload response. Status: ${res.statusCode}`);
+        return originalSend.apply(res, arguments);
+    };
+    next();
+});
+
 // Configure multer for file uploads
 const upload = multer({
     dest: 'uploads/',
