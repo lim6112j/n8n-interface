@@ -60,10 +60,15 @@ const port = 3000;
 
 // Debug logging middleware for /upload to check if the request even reaches Express
 app.use('/upload', (req, res, next) => {
-    console.log(`[DEBUG] Incoming /upload request. Content-Length: ${req.headers['content-length']}`);
+    const logLine = `[${new Date().toISOString()}] Incoming /upload request. Content-Length: ${req.headers['content-length']}\n`;
+    console.log(logLine.trim());
+    fs.appendFileSync('debug.log', logLine);
+    
     const originalSend = res.send;
     res.send = function (data) {
-        console.log(`[DEBUG] Outgoing /upload response. Status: ${res.statusCode}`);
+        const outLine = `[${new Date().toISOString()}] Outgoing /upload response. Status: ${res.statusCode}\n`;
+        console.log(outLine.trim());
+        fs.appendFileSync('debug.log', outLine);
         return originalSend.apply(res, arguments);
     };
     next();
