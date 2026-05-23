@@ -59,11 +59,16 @@ const app = express();
 const port = 3000;
 
 // Configure multer for file uploads
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({
+    dest: 'uploads/',
+    limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB
+    },
+});
 
 // Create agents for HTTP/1.1 support (n8n webhook requires HTTP/1.1, not HTTP/2)
 const httpAgent = new http.Agent({ keepAlive: true });
-const httpsAgent = new https.Agent({ 
+const httpsAgent = new https.Agent({
     keepAlive: true,
     maxSockets: 10,
     rejectUnauthorized: false,
@@ -113,47 +118,47 @@ passport.use(new GoogleStrategy({
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL || "/auth/google/callback",
     proxy: true
-  },
-  async function(accessToken, refreshToken, profile, cb) {
-    try {
-        const googleId = profile.id;
-        const email = profile.emails && profile.emails.length > 0 ? profile.emails[0].value : null;
-        const name = profile.displayName;
+},
+    async function (accessToken, refreshToken, profile, cb) {
+        try {
+            const googleId = profile.id;
+            const email = profile.emails && profile.emails.length > 0 ? profile.emails[0].value : null;
+            const name = profile.displayName;
 
-        let result = await pool.query('SELECT * FROM users WHERE google_id = $1', [googleId]);
-        
-        if (result.rows.length === 0) {
-            // New user registration
-            let role = 'user';
-            const superuserEmails = process.env.SUPERUSER_EMAILS ? process.env.SUPERUSER_EMAILS.split(',').map(e => e.trim()) : [];
-            if (email && superuserEmails.includes(email)) {
-                role = 'superuser';
+            let result = await pool.query('SELECT * FROM users WHERE google_id = $1', [googleId]);
+
+            if (result.rows.length === 0) {
+                // New user registration
+                let role = 'user';
+                const superuserEmails = process.env.SUPERUSER_EMAILS ? process.env.SUPERUSER_EMAILS.split(',').map(e => e.trim()) : [];
+                if (email && superuserEmails.includes(email)) {
+                    role = 'superuser';
+                }
+                const insertResult = await pool.query(
+                    'INSERT INTO users (google_id, email, name, role) VALUES ($1, $2, $3, $4) RETURNING *',
+                    [googleId, email, name, role]
+                );
+                return cb(null, insertResult.rows[0]);
+            } else {
+                // Existing user
+                return cb(null, result.rows[0]);
             }
-            const insertResult = await pool.query(
-                'INSERT INTO users (google_id, email, name, role) VALUES ($1, $2, $3, $4) RETURNING *',
-                [googleId, email, name, role]
-            );
-            return cb(null, insertResult.rows[0]);
-        } else {
-            // Existing user
-            return cb(null, result.rows[0]);
+        } catch (err) {
+            return cb(err);
         }
-    } catch (err) {
-        return cb(err);
     }
-  }
 ));
 
 // Auth Routes
 app.get('/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] }));
+    passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-app.get('/auth/google/callback', 
-  passport.authenticate('google', { failureRedirect: '/' }),
-  function(req, res) {
-    // Successful authentication, redirect to home.
-    res.redirect('/');
-  });
+app.get('/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/' }),
+    function (req, res) {
+        // Successful authentication, redirect to home.
+        res.redirect('/');
+    });
 
 app.get('/api/current-user', (req, res) => {
     if (req.isAuthenticated()) {
@@ -284,7 +289,7 @@ app.get('/api/db/tables/:tableName', async (req, res) => {
     const { tableName } = req.params;
     const schema = req.dbSchema;
     const { offset = 0, limit = 50, filterCol, filterVal } = req.query;
-    
+
     if (!/^[a-zA-Z0-9_]+$/.test(tableName)) {
         return res.status(400).json({ error: 'Invalid table name' });
     }
@@ -298,15 +303,15 @@ app.get('/api/db/tables/:tableName', async (req, res) => {
         `;
         const colResult = await pool.query(colQuery, [schema, tableName]);
         const validColumns = colResult.rows.map(c => c.column_name);
-        
+
         let queryParams = [];
         let whereClause = '';
-        
+
         if (filterCol && filterVal && validColumns.includes(filterCol)) {
             whereClause = `WHERE "${filterCol}"::text ILIKE $1`;
             queryParams.push(`%${filterVal}%`);
         }
-        
+
         let orderClause = '';
         if (validColumns.includes('id')) {
             orderClause = 'ORDER BY id ASC';
@@ -318,10 +323,10 @@ app.get('/api/db/tables/:tableName', async (req, res) => {
 
         const dataQuery = `SELECT * FROM "${schema}"."${tableName}" ${whereClause} ${orderClause} ${limitOffsetStr};`;
         const dataResult = await pool.query(dataQuery, queryParams);
-        
-        res.json({ 
+
+        res.json({
             columns: colResult.rows,
-            data: dataResult.rows 
+            data: dataResult.rows
         });
     } catch (error) {
         console.error(`Error fetching data for ${tableName}:`, error);
@@ -342,9 +347,9 @@ app.post('/api/db/tables/:tableName', async (req, res) => {
         const columns = Object.keys(rowData).filter(col => col !== 'id' || rowData[col] !== '');
         const values = columns.map(col => rowData[col]);
         const placeholders = columns.map((_, i) => `$${i + 1}`);
-        
+
         if (columns.length === 0) {
-             return res.status(400).json({ error: 'No data provided' });
+            return res.status(400).json({ error: 'No data provided' });
         }
 
         const query = `INSERT INTO "${schema}"."${tableName}" ("${columns.join('", "')}") VALUES (${placeholders.join(', ')}) RETURNING *`;
@@ -367,12 +372,12 @@ app.put('/api/db/tables/:tableName/:id', async (req, res) => {
         const rowData = req.body;
         const columns = Object.keys(rowData).filter(col => col !== 'id');
         const values = columns.map(col => rowData[col]);
-        
+
         const setClause = columns.map((col, i) => `"${col}" = $${i + 1}`).join(', ');
-        
+
         values.push(id);
         const query = `UPDATE "${schema}"."${tableName}" SET ${setClause} WHERE id = $${values.length} RETURNING *`;
-        
+
         const result = await pool.query(query, values);
         if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Row not found' });
@@ -414,8 +419,8 @@ app.post('/upload', upload.array('file'), async (req, res) => {
         req.files.forEach((file, index) => {
             const contentType = file.mimetype === 'text/csv' ? 'text/csv' :
                 (file.mimetype === 'application/vnd.ms-excel' ? 'application/vnd.ms-excel' :
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
             const key = req.files.length === 1 ? 'file' : `file${index}`;
             formData.append(key, fs.createReadStream(file.path), {
                 filename: file.originalname,
