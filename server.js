@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const https = require('https');
+const crypto = require('crypto');
 const { Pool } = require('pg');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
@@ -223,16 +224,38 @@ app.put('/api/users/:id/role', async (req, res) => {
     }
 });
 
+// --- Human-In-The-Loop (HITL) Approval State ---
+// Maps requestId → { resumeUrl, approvalData, status: 'pending_approval' }
+const approvalStore = new Map();
+
 // In-memory store for async callback results (requestId → { html, insights, receivedAt })
 const callbackStore = new Map();
 
+// --- Human-In-The-Loop (HITL) Approval Endpoints ---
+
 // Callback endpoint for n8n async workflows
+// If the n8n workflow sends 'needsApproval' flag, this stores the resumeUrl
 app.post('/callback', (req, res) => {
     const targetId = req.body.requestId || req.body.sessionId;
-    const { html, insights } = req.body;
+    const { html, insights, resumeUrl, needsApproval, approvalData } = req.body;
     if (!targetId) {
         return res.status(400).json({ error: 'requestId required' });
     }
+
+    // Check if this is an approval request (from n8n Wait node)
+    if (needsApproval === true && resumeUrl) {
+        approvalStore.set(targetId, {
+            resumeUrl,
+            approvalData: approvalData || {},
+            status: 'pending_approval',
+            receivedAt: new Date().toISOString()
+        });
+        console.log(`[callback] Received approval request for requestId=${targetId}`);
+        res.json({ success: true, status: 'approval_required' });
+        return;
+    }
+
+    // Normal result callback (workflow completed or no approval needed)
     callbackStore.set(targetId, { html, insights, receivedAt: new Date().toISOString() });
     console.log(`[callback] Received result for requestId=${targetId}`);
     // Auto-cleanup after 10 minutes
@@ -242,11 +265,69 @@ app.post('/callback', (req, res) => {
 
 // Status endpoint for frontend polling
 app.get('/status/:requestId', (req, res) => {
-    const result = callbackStore.get(req.params.requestId);
+    const requestId = req.params.requestId;
+
+    // First check if workflow is awaiting approval
+    const approval = approvalStore.get(requestId);
+    if (approval) {
+        return res.json({
+            status: 'awaiting_approval',
+            approvalData: approval.approvalData,
+            message: 'Awaiting human approval'
+        });
+    }
+
+    // Otherwise check for completed result
+    const result = callbackStore.get(requestId);
     if (!result) {
         return res.json({ status: 'pending' });
     }
     res.json({ status: 'completed', html: result.html, insights: result.insights });
+});
+
+// Approve or deny action - client calls this when user clicks approve/deny
+app.post('/approve/:requestId', async (req, res) => {
+    const requestId = req.params.requestId;
+    const { approved, reason } = req.body;
+
+    const approval = approvalStore.get(requestId);
+    if (!approval) {
+        return res.status(404).json({ error: 'Approval session not found or already processed' });
+    }
+
+    try {
+        // Send approval/denial to n8n's Wait node resume URL
+        // The Wait node in webhook mode expects a GET with query params,
+        // or POST with JSON body depending on configuration.
+        // By default, n8n Wait node resumes on ANY webhook call to the resumeUrl.
+
+        // Build the resume URL with approval data as query parameters (recommended for Wait node)
+        const url = new URL(approval.resumeUrl);
+        url.searchParams.append('approved', approved === true);
+        if (reason) url.searchParams.append('reason', reason);
+
+        // If Wait node mode is set to "On Webhook Call" (POST), use POST instead
+        // Default n8n Wait node behavior: ANY HTTP method to resumeUrl will resume
+        const response = await axios({
+            method: 'GET',
+            url: url.toString(),
+            timeout: 30000,
+            httpAgent: httpAgent,
+            httpsAgent: httpsAgent
+        });
+
+        // Remove from approval store - workflow is now resuming
+        approvalStore.delete(requestId);
+
+        // Also auto-cleanup from approvalStore after a bit
+        setTimeout(() => approvalStore.delete(requestId), 5000);
+
+        console.log(`[approve] RequestId=${requestId} approved=${approved}, n8n responded with status ${response.status}`);
+        res.json({ success: true, message: `Workflow is ${approved ? 'approved' : 'denied'} and resuming.` });
+    } catch (error) {
+        console.error(`[approve] Error forwarding approval for requestId=${requestId}:`, error.message);
+        res.status(500).json({ error: 'Failed to approve workflow', details: error.message });
+    }
 });
 
 // Protect HTML files except index.html

@@ -255,6 +255,107 @@
             background: rgba(0, 0, 0, 0.9);
         }
 
+        /* Approval Overlay */
+        .approval-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            backdrop-filter: blur(4px);
+        }
+        .approval-card {
+            background: var(--panel-bg);
+            border: 2px solid var(--neon-cyan);
+            border-radius: 12px;
+            padding: 30px 35px;
+            max-width: 520px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
+            animation: approvalIn 0.3s ease-out;
+        }
+        @keyframes approvalIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to   { transform: scale(1); opacity: 1; }
+        }
+        .approval-icon { font-size: 40px; margin-bottom: 10px; }
+        .approval-title {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--neon-cyan);
+            font-size: 18px;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+        .approval-subtitle {
+            font-family: 'Rajdhani', sans-serif;
+            color: #8892b0;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .approval-content {
+            text-align: left;
+            background: rgba(0, 243, 255, 0.05);
+            border: 1px solid rgba(0, 243, 255, 0.15);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .approval-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        .approve-btn, .deny-btn {
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .approve-btn {
+            background: rgba(0, 243, 255, 0.15);
+            color: var(--neon-cyan);
+            border: 1px solid var(--neon-cyan);
+        }
+        .approve-btn:hover {
+            background: var(--neon-cyan);
+            color: #000;
+        }
+        .deny-btn {
+            background: rgba(255, 42, 109, 0.15);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+        .deny-btn:hover {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        body.light-theme .approval-overlay { background: rgba(255,255,255,0.9); }
+        body.light-theme .approval-card { border-color: #0077b6; background: #fff; box-shadow: 0 0 20px rgba(0,119,182,0.15); }
+        body.light-theme .approval-title { color: #0077b6; }
+        body.light-theme .approval-content { background: #f5f7fa; border-color: #ddd; color: #333; }
+        body.light-theme .approve-btn { background: #e3f2fd; color: #01579b; border-color: #0077b6; }
+        body.light-theme .approve-btn:hover { background: #0077b6; color: #fff; }
+        body.light-theme .deny-btn { background: #ffebee; color: #c62828; border-color: #e53935; }
+        body.light-theme .deny-btn:hover { background: #e53935; color: #fff; }
+
+        body.sunset-theme .approval-card { border-color: #ff7b00; box-shadow: 0 0 30px rgba(255, 123, 0, 0.3); }
+        body.sunset-theme .approval-title { color: #ff7b00; }
+        body.sunset-theme .approve-btn { border-color: #ff7b00; color: #ff7b00; }
+        body.sunset-theme .approve-btn:hover { background: #ff7b00; color: #000; }
+
         .print-btn svg {
             width: 14px;
             height: 14px;
@@ -914,6 +1015,20 @@
                 <p>엑셀파일을 선택해서 분석을 요청하세요.( 600 kb 이하 권장)</p>
             </div>
             <div id="reportsContainer" class="reports-container"></div>
+
+            <!-- Approval Overlay -->
+            <div id="approvalOverlay" class="approval-overlay" style="display:none;">
+                <div class="approval-card">
+                    <div class="approval-icon">🤝</div>
+                    <h3 class="approval-title">Human Approval Required</h3>
+                    <p class="approval-subtitle">The workflow is paused awaiting your decision.</p>
+                    <div id="approvalContent" class="approval-content"></div>
+                    <div class="approval-actions">
+                        <button id="approveBtn" class="approve-btn">✅  Approve</button>
+                        <button id="denyBtn" class="deny-btn">❌  Reject</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="chat-pane">
@@ -1010,6 +1125,10 @@
         const reportsContainer = document.getElementById('reportsContainer');
         const welcomeScreen = document.getElementById('welcomeScreen');
         const insightsList = document.getElementById('insightsList');
+        const approvalOverlay = document.getElementById('approvalOverlay');
+        const approvalContent = document.getElementById('approvalContent');
+        const approveBtn = document.getElementById('approveBtn');
+        const denyBtn = document.getElementById('denyBtn');
 
         // Handlers
         function updateSendButtonState() {
@@ -1126,8 +1245,16 @@
                     if (!response.ok) throw new Error(`Status check returned ${response.status}`);
                     const data = await response.json();
 
+                    // Check if awaiting human approval
+                    if (data.status === 'awaiting_approval') {
+                        setProcessing(false);
+                        showApprovalUI(requestId, data.approvalData, fileName);
+                        return;
+                    }
+
                     if (data.status === 'completed') {
                         setProcessing(false);
+                        hideApprovalUI();
                         updateReportAndInsights(data);
                         if (fileName) {
                             addMessage('ai', `Analysis complete for <b>${fileName}</b>. Report generated to the left dashboard.`);
@@ -1160,6 +1287,65 @@
 
             setProcessing(true, 'Ciel AI processing...');
             poll();
+        }
+
+        function showApprovalUI(requestId, approvalData, fileName) {
+            // Format approval data for display
+            let contentHtml = '';
+            if (approvalData && Object.keys(approvalData).length > 0) {
+                contentHtml += '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+                for (const [key, value] of Object.entries(approvalData)) {
+                    contentHtml += `<tr><td style="padding:4px 8px 4px 0;color:#888;white-space:nowrap;font-weight:600;">${escapeHtml(key)}:</td><td style="padding:4px 0;word-break:break-word;">${escapeHtml(String(value))}</td></tr>`;
+                }
+                contentHtml += '</table>';
+            } else {
+                contentHtml = '<div style="color:#888;text-align:center;">No details provided.</div>';
+            }
+            approvalContent.innerHTML = contentHtml;
+            approvalOverlay.style.display = 'flex';
+
+            // Bind approval buttons
+            approveBtn.onclick = () => sendApproval(requestId, true, fileName);
+            denyBtn.onclick = () => {
+                const reason = prompt('Enter reason for rejection (optional):');
+                sendApproval(requestId, false, fileName, reason);
+            };
+        }
+
+        function hideApprovalUI() {
+            approvalOverlay.style.display = 'none';
+            approveBtn.onclick = null;
+            denyBtn.onclick = null;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function sendApproval(requestId, approved, fileName, reason = '') {
+            try {
+                addMessage('ai', approved ? 'You approved the workflow. Resuming...' : 'You denied the workflow. Resuming...');
+                hideApprovalUI();
+                setProcessing(true, approved ? 'Processing approval...' : 'Cancelling...');
+
+                const response = await fetch(`/approve/${requestId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ approved, reason })
+                });
+                if (!response.ok) throw new Error(`Server returned ${response.status}`);
+
+                addMessage('ai', approved ? 'Workflow approved and is now resuming...' : 'Workflow rejected. Waiting for result...');
+
+                // Continue polling for the final result after approval
+                setTimeout(() => pollForResult(requestId, fileName), 2000);
+            } catch (err) {
+                console.error('Approval error:', err);
+                addMessage('ai', `Approval Error: ${err.message}`);
+                setProcessing(false);
+            }
         }
 
         function updateReportAndInsights(data) {
