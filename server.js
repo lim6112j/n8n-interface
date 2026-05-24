@@ -295,37 +295,43 @@ app.post('/approve/:requestId', async (req, res) => {
         return res.status(404).json({ error: 'Approval session not found or already processed' });
     }
 
+    console.log(`[approve] RequestId=${requestId} approved=${approved} resumeUrl=${approval.resumeUrl}`);
+
     try {
-        // Send approval/denial to n8n's Wait node resume URL
-        // The Wait node in webhook mode expects a GET with query params,
-        // or POST with JSON body depending on configuration.
-        // By default, n8n Wait node resumes on ANY webhook call to the resumeUrl.
-
-        // Build the resume URL with approval data as query parameters (recommended for Wait node)
-        const url = new URL(approval.resumeUrl);
-        url.searchParams.append('approved', approved === true);
-        if (reason) url.searchParams.append('reason', reason);
-
-        // If Wait node mode is set to "On Webhook Call" (POST), use POST instead
-        // Default n8n Wait node behavior: ANY HTTP method to resumeUrl will resume
+        // n8n Wait node with httpMethod=POST requires POST to resume
+        // Send approval data as JSON body
         const response = await axios({
-            method: 'GET',
-            url: url.toString(),
+            method: 'POST',
+            url: approval.resumeUrl,
+            data: { approved: approved === true, reason: reason || '' },
             timeout: 30000,
             httpAgent: httpAgent,
-            httpsAgent: httpsAgent
+            httpsAgent: httpsAgent,
+            validateStatus: () => true // Don't throw on non-2xx, we handle it
         });
+
+        console.log(`[approve] n8n responded status=${response.status} data=${JSON.stringify(response.data).substring(0, 200)}`);
+
+        if (response.status >= 400) {
+            console.error(`[approve] n8n returned error status ${response.status}: ${JSON.stringify(response.data)}`);
+            return res.status(502).json({
+                error: 'n8n returned an error when resuming workflow',
+                n8nStatus: response.status,
+                details: response.data
+            });
+        }
 
         // Remove from approval store - workflow is now resuming
         approvalStore.delete(requestId);
-
-        // Also auto-cleanup from approvalStore after a bit
         setTimeout(() => approvalStore.delete(requestId), 5000);
 
-        console.log(`[approve] RequestId=${requestId} approved=${approved}, n8n responded with status ${response.status}`);
         res.json({ success: true, message: `Workflow is ${approved ? 'approved' : 'denied'} and resuming.` });
     } catch (error) {
         console.error(`[approve] Error forwarding approval for requestId=${requestId}:`, error.message);
+        if (error.response) {
+            console.error(`[approve] n8n response status: ${error.response.status}`);
+            console.error(`[approve] n8n response data: ${JSON.stringify(error.response.data).substring(0, 500)}`);
+        }
         res.status(500).json({ error: 'Failed to approve workflow', details: error.message });
     }
 });
