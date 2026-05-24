@@ -448,7 +448,8 @@ app.post('/upload', upload.array('file'), async (req, res) => {
         const sessionId = req.query.sessionId || req.body.sessionId || 'unknown';
         const userId = req.user ? req.user.id : 'anonymous';
         const requestId = crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-        const webhookUrl = `http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991?sessionId=${sessionId}&requestId=${requestId}&userId=${userId}`;
+        const baseUrl = process.env.WEBHOOK_URL || 'http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
+        const webhookUrl = `${baseUrl}?sessionId=${sessionId}&requestId=${requestId}&userId=${userId}`;
 
         // Increase timeout to 15 minutes (900000 ms) as requested
         const TIMEOUT_MS = 900000;
@@ -513,8 +514,9 @@ app.post('/interact', async (req, res) => {
     const sessionId = req.query.sessionId || req.body.sessionId || 'unknown';
     const userId = req.user ? req.user.id : 'anonymous';
     const requestId = crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    // const interactionWebhookUrl = 'https://draven-reparative-subfestively.ngrok-free.dev/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
-    const interactionWebhookUrl = `http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991?sessionId=${sessionId}&requestId=${requestId}&userId=${userId}`;
+    
+    const baseUrl = process.env.INTERACTION_WEBHOOK_URL || 'http://localhost:5678/webhook/10df9f3d-ca2d-4a30-9d49-472866901991';
+    const interactionWebhookUrl = `${baseUrl}?sessionId=${sessionId}&requestId=${requestId}&userId=${userId}`;
     try {
         // Send the message to the webhook — wrap in { body } so n8n workflow's Switch node can match it
         const response = await axios.post(interactionWebhookUrl, { body: { message } }, {
