@@ -342,8 +342,8 @@ app.use((req, res, next) => {
         if (!req.isAuthenticated()) {
             return res.redirect('/');
         }
-        // Specific check for admin.html
-        if (req.path === '/admin.html' && req.user.role === 'user') {
+        // Specific check for admin.html and system_prompts.html
+        if ((req.path === '/admin.html' || req.path === '/system_prompts.html') && req.user.role === 'user') {
             return res.redirect('/');
         }
     }
@@ -352,6 +352,106 @@ app.use((req, res, next) => {
 
 // Serve static files from the public directory
 app.use(express.static('public'));
+
+// Middleware to protect admin system-prompts API routes
+const requireAdminAuth = (req, res, next) => {
+    if (!req.isAuthenticated() || (req.user.role !== 'admin' && req.user.role !== 'superuser')) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    next();
+};
+
+// --- System Prompts CRUD Endpoints (Admin only) ---
+app.use('/api/system-prompts', requireAdminAuth);
+
+// Get all system prompts
+app.get('/api/system-prompts', async (req, res) => {
+    try {
+        const query = 'SELECT id, workflow_name, workflow_id, node_name, prompt, created_at FROM public.system_prompts ORDER BY workflow_name ASC, node_name ASC, id ASC;';
+        const result = await pool.query(query);
+        res.json({ prompts: result.rows });
+    } catch (error) {
+        console.error('Error fetching system prompts:', error);
+        res.status(500).json({ error: 'Failed to fetch system prompts' });
+    }
+});
+
+// Get a single system prompt
+app.get('/api/system-prompts/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const query = 'SELECT id, workflow_name, workflow_id, node_name, prompt, created_at FROM public.system_prompts WHERE id = $1;';
+        const result = await pool.query(query, [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'System prompt not found' });
+        }
+        res.json({ prompt: result.rows[0] });
+    } catch (error) {
+        console.error(`Error fetching system prompt ${id}:`, error);
+        res.status(500).json({ error: 'Failed to fetch system prompt' });
+    }
+});
+
+// Create a new system prompt
+app.post('/api/system-prompts', async (req, res) => {
+    const { workflow_name, workflow_id, node_name, prompt } = req.body;
+    if (!workflow_name) {
+        return res.status(400).json({ error: 'Workflow name is required' });
+    }
+    try {
+        const query = `
+            INSERT INTO public.system_prompts (workflow_name, workflow_id, node_name, prompt)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, workflow_name, workflow_id, node_name, prompt, created_at;
+        `;
+        const result = await pool.query(query, [workflow_name, workflow_id || null, node_name || null, prompt || null]);
+        res.status(201).json({ success: true, prompt: result.rows[0] });
+    } catch (error) {
+        console.error('Error creating system prompt:', error);
+        res.status(500).json({ error: 'Failed to create system prompt' });
+    }
+});
+
+// Update a system prompt
+app.put('/api/system-prompts/:id', async (req, res) => {
+    const { id } = req.params;
+    const { workflow_name, workflow_id, node_name, prompt } = req.body;
+    if (!workflow_name) {
+        return res.status(400).json({ error: 'Workflow name is required' });
+    }
+    try {
+        const query = `
+            UPDATE public.system_prompts
+            SET workflow_name = $1, workflow_id = $2, node_name = $3, prompt = $4
+            WHERE id = $5
+            RETURNING id, workflow_name, workflow_id, node_name, prompt, created_at;
+        `;
+        const result = await pool.query(query, [workflow_name, workflow_id || null, node_name || null, prompt || null, id]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'System prompt not found' });
+        }
+        res.json({ success: true, prompt: result.rows[0] });
+    } catch (error) {
+        console.error(`Error updating system prompt ${id}:`, error);
+        res.status(500).json({ error: 'Failed to update system prompt' });
+    }
+});
+
+// Delete a system prompt
+app.delete('/api/system-prompts/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const query = 'DELETE FROM public.system_prompts WHERE id = $1 RETURNING id, workflow_name;';
+        const result = await pool.query(query, [id]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'System prompt not found' });
+        }
+        res.json({ success: true, message: `System prompt '${result.rows[0].workflow_name}' deleted successfully` });
+    } catch (error) {
+        console.error(`Error deleting system prompt ${id}:`, error);
+        res.status(500).json({ error: 'Failed to delete system prompt' });
+    }
+});
 
 // --- Database API Endpoints ---
 
