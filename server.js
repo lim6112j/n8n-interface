@@ -367,7 +367,7 @@ app.use('/api/system-prompts', requireAdminAuth);
 // Get all system prompts
 app.get('/api/system-prompts', async (req, res) => {
     try {
-        const query = 'SELECT id, workflow_name, workflow_id, node_name, prompt, created_at FROM public.system_prompts ORDER BY workflow_name ASC, node_name ASC, id ASC;';
+        const query = 'SELECT id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes FROM public.system_prompts ORDER BY workflow_name ASC, node_name ASC, id ASC;';
         const result = await pool.query(query);
         res.json({ prompts: result.rows });
     } catch (error) {
@@ -380,7 +380,7 @@ app.get('/api/system-prompts', async (req, res) => {
 app.get('/api/system-prompts/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        const query = 'SELECT id, workflow_name, workflow_id, node_name, prompt, created_at FROM public.system_prompts WHERE id = $1;';
+        const query = 'SELECT id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes FROM public.system_prompts WHERE id = $1;';
         const result = await pool.query(query, [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'System prompt not found' });
@@ -394,17 +394,24 @@ app.get('/api/system-prompts/:id', async (req, res) => {
 
 // Create a new system prompt
 app.post('/api/system-prompts', async (req, res) => {
-    const { workflow_name, workflow_id, node_name, prompt } = req.body;
+    const { workflow_name, workflow_id, node_name, prompt, workflow_view_name, changes } = req.body;
     if (!workflow_name) {
         return res.status(400).json({ error: 'Workflow name is required' });
     }
     try {
         const query = `
-            INSERT INTO public.system_prompts (workflow_name, workflow_id, node_name, prompt)
-            VALUES ($1, $2, $3, $4)
-            RETURNING id, workflow_name, workflow_id, node_name, prompt, created_at;
+            INSERT INTO public.system_prompts (workflow_name, workflow_id, node_name, prompt, workflow_view_name, changes)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes;
         `;
-        const result = await pool.query(query, [workflow_name, workflow_id || null, node_name || null, prompt || null]);
+        const result = await pool.query(query, [
+            workflow_name,
+            workflow_id || null,
+            node_name || null,
+            prompt || null,
+            workflow_view_name || null,
+            changes || null
+        ]);
         res.status(201).json({ success: true, prompt: result.rows[0] });
     } catch (error) {
         console.error('Error creating system prompt:', error);
@@ -415,18 +422,26 @@ app.post('/api/system-prompts', async (req, res) => {
 // Update a system prompt
 app.put('/api/system-prompts/:id', async (req, res) => {
     const { id } = req.params;
-    const { workflow_name, workflow_id, node_name, prompt } = req.body;
+    const { workflow_name, workflow_id, node_name, prompt, workflow_view_name, changes } = req.body;
     if (!workflow_name) {
         return res.status(400).json({ error: 'Workflow name is required' });
     }
     try {
         const query = `
             UPDATE public.system_prompts
-            SET workflow_name = $1, workflow_id = $2, node_name = $3, prompt = $4
-            WHERE id = $5
-            RETURNING id, workflow_name, workflow_id, node_name, prompt, created_at;
+            SET workflow_name = $1, workflow_id = $2, node_name = $3, prompt = $4, workflow_view_name = $5, changes = $6
+            WHERE id = $7
+            RETURNING id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes;
         `;
-        const result = await pool.query(query, [workflow_name, workflow_id || null, node_name || null, prompt || null, id]);
+        const result = await pool.query(query, [
+            workflow_name,
+            workflow_id || null,
+            node_name || null,
+            prompt || null,
+            workflow_view_name || null,
+            changes || null,
+            id
+        ]);
         if (result.rowCount === 0) {
             return res.status(404).json({ error: 'System prompt not found' });
         }

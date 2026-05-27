@@ -51,7 +51,7 @@
 
         .app-container {
             display: flex;
-            width: 95vw;
+            width: 96vw;
             height: 90vh;
             background: rgba(5, 10, 20, 0.85);
             border: 1px solid rgba(0, 243, 255, 0.25);
@@ -64,12 +64,13 @@
 
         /* Sidebar Styling */
         .sidebar {
-            width: 320px;
+            width: 290px;
             border-right: 1px solid rgba(0, 243, 255, 0.2);
             display: flex;
             flex-direction: column;
             background: rgba(0, 243, 255, 0.01);
             flex-shrink: 0;
+            transition: all 0.3s ease;
         }
 
         .sidebar-header {
@@ -149,6 +150,46 @@
             transform: translateY(-1px);
         }
 
+        /* Second sidebar style (Nodes) */
+        .nodes-sidebar {
+            width: 250px;
+            background: rgba(0, 243, 255, 0.005);
+            transition: width 0.3s ease, border-right-color 0.3s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(0, 243, 255, 0.2);
+        }
+
+        .nodes-sidebar.collapsed {
+            width: 0px !important;
+            border-right-color: transparent !important;
+            pointer-events: none;
+        }
+
+        .btn-add-new-node {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid rgba(0, 243, 255, 0.4);
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 600;
+            font-size: 13px;
+            border-radius: 6px;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.1);
+        }
+
+        .btn-add-new-node:hover {
+            background: rgba(0, 243, 255, 0.2);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
         .prompts-list {
             list-style: none;
             overflow-y: auto;
@@ -194,12 +235,6 @@
             display: flex;
             justify-content: space-between;
             gap: 10px;
-        }
-
-        .prompt-item-node {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
         /* Main Workspace Styling */
@@ -468,10 +503,10 @@
     <canvas id="matrix-bg"></canvas>
 
     <div class="app-container">
-        <!-- Sidebar -->
-        <div class="sidebar">
+        <!-- First Sidebar: Workflows -->
+        <div class="sidebar" id="workflowsSidebar">
             <div class="sidebar-header">
-                <div>PROMPTS</div>
+                <div>WORKFLOWS</div>
                 <a href="admin.html" class="back-link">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -482,20 +517,35 @@
             </div>
 
             <div class="search-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="검색 (워크플로우, 노드)..." oninput="filterPrompts()">
+                <input type="text" id="searchInput" class="search-input" placeholder="워크플로우 검색..." oninput="filterWorkflows()">
             </div>
 
             <div class="add-prompt-btn-container">
-                <button class="btn-add-new" onclick="startNewPrompt()">+ 새 프롬프트 추가</button>
+                <button class="btn-add-new" onclick="startNewWorkflowPrompt()">+ 새 워크플로우 추가</button>
             </div>
 
-            <ul class="prompts-list" id="promptsList">
-                <!-- Javascript will load list items here -->
+            <ul class="prompts-list" id="workflowsList">
+                <!-- Javascript will load workflows list items here -->
+            </ul>
+        </div>
+
+        <!-- Second Sidebar: Nodes (Dynamically slides in when workflow selected) -->
+        <div class="nodes-sidebar collapsed" id="nodesSidebar">
+            <div class="sidebar-header" style="padding: 16px 20px; font-size: 14px; border-bottom: 1px dashed rgba(0, 243, 255, 0.15);">
+                <div id="selectedWorkflowViewTitle" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--neon-cyan);">NODES</div>
+            </div>
+
+            <div class="add-prompt-btn-container" style="padding: 12px 20px;">
+                <button class="btn-add-new-node" onclick="startNewNodePrompt()">+ 새 노드 추가</button>
+            </div>
+
+            <ul class="prompts-list" id="nodesList">
+                <!-- Javascript will load nodes here -->
             </ul>
         </div>
 
         <!-- Main Workspace -->
-        <div class="main-content">
+        <div class="main-content" id="mainContent">
             <!-- Empty State -->
             <div id="emptyState" class="empty-state">
                 <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -505,8 +555,8 @@
                     <line x1="16" y1="17" x2="8" y2="17"></line>
                     <polyline points="10 9 9 9 8 9"></polyline>
                 </svg>
-                <h3>프롬프트를 선택하거나 새로 만드세요</h3>
-                <p style="color: #6c7a9c; font-size: 14px;">좌측 목록에서 편집할 프롬프트를 선택하십시오.</p>
+                <h3>워크플로우 및 노드를 선택하십시오</h3>
+                <p style="color: #6c7a9c; font-size: 14px;">좌측의 워크플로우 그룹을 클릭하고 노드를 선택해 편집하십시오.</p>
             </div>
 
             <!-- Editor Workspace -->
@@ -525,8 +575,12 @@
 
                 <div class="form-grid">
                     <div class="form-group">
-                        <label class="form-label" for="workflowName">워크플로우 이름 *</label>
+                        <label class="form-label" for="workflowName">워크플로우 실제 이름 *</label>
                         <input type="text" id="workflowName" class="form-control" placeholder="예: logistics_analysis">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="workflowViewName">화면 표시명 (View Name)</label>
+                        <input type="text" id="workflowViewName" class="form-control" placeholder="예: 물류분석">
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="workflowId">워크플로우 ID</label>
@@ -535,6 +589,10 @@
                     <div class="form-group">
                         <label class="form-label" for="nodeName">노드 이름</label>
                         <input type="text" id="nodeName" class="form-control" placeholder="예: Generate Analysis Code">
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label class="form-label" for="changes">변경 사항 (Changes)</label>
+                        <input type="text" id="changes" class="form-control" placeholder="예: v1.0.1 - 차량번호 감지 정규식 수정">
                     </div>
                 </div>
 
@@ -589,6 +647,8 @@
 
         // App Logic
         let allPrompts = [];
+        let uniqueWorkflows = [];
+        let activeWorkflow = null;
         let selectedPrompt = null;
         let isCreatingNew = false;
 
@@ -623,7 +683,21 @@
                 if (res.ok) {
                     const data = await res.json();
                     allPrompts = data.prompts;
-                    renderPromptsList(allPrompts);
+                    groupWorkflows();
+                    renderWorkflowsList();
+                    if (activeWorkflow) {
+                        // Re-evaluate active workflow in new list
+                        const updatedW = uniqueWorkflows.find(w => 
+                            w.workflow_id === activeWorkflow.workflow_id && 
+                            w.workflow_name === activeWorkflow.workflow_name
+                        );
+                        if (updatedW) {
+                            activeWorkflow = updatedW;
+                            renderNodesList();
+                        } else {
+                            closeNodesSidebar();
+                        }
+                    }
                 } else {
                     showStatus('프롬프트 로드 실패', true);
                 }
@@ -633,47 +707,177 @@
             }
         }
 
-        function renderPromptsList(prompts) {
-            const listEl = document.getElementById('promptsList');
+        // Group prompts by workflow_id (or workflow_name fallback)
+        function groupWorkflows() {
+            const groups = {};
+            allPrompts.forEach(p => {
+                // Key is workflow_id, fallback to workflow_name
+                const key = p.workflow_id || p.workflow_name || 'unknown';
+                if (!groups[key]) {
+                    groups[key] = {
+                        workflow_id: p.workflow_id || '',
+                        workflow_name: p.workflow_name || '',
+                        workflow_view_name: p.workflow_view_name || '',
+                        nodeCount: 0,
+                        prompts: []
+                    };
+                }
+                
+                // Keep the workflow_view_name from first non-empty value
+                if (p.workflow_view_name && !groups[key].workflow_view_name) {
+                    groups[key].workflow_view_name = p.workflow_view_name;
+                }
+                // Fallback workflow_name if not already populated
+                if (p.workflow_name && !groups[key].workflow_name) {
+                    groups[key].workflow_name = p.workflow_name;
+                }
+
+                groups[key].nodeCount++;
+                groups[key].prompts.push(p);
+            });
+
+            uniqueWorkflows = Object.values(groups);
+        }
+
+        function renderWorkflowsList() {
+            const listEl = document.getElementById('workflowsList');
             listEl.innerHTML = '';
 
-            if (prompts.length === 0) {
-                listEl.innerHTML = '<li style="padding: 20px; color: #8892b0; text-align: center; font-size: 14px;">검색된 프롬프트가 없습니다.</li>';
+            if (uniqueWorkflows.length === 0) {
+                listEl.innerHTML = '<li style="padding: 20px; color: #8892b0; text-align: center; font-size: 14px;">검색된 워크플로우가 없습니다.</li>';
                 return;
             }
 
-            prompts.forEach(p => {
+            uniqueWorkflows.forEach(w => {
+                const isActive = activeWorkflow && 
+                    ((w.workflow_id && w.workflow_id === activeWorkflow.workflow_id) || 
+                     (!w.workflow_id && w.workflow_name === activeWorkflow.workflow_name));
+                
                 const li = document.createElement('li');
-                li.className = `prompt-item ${selectedPrompt && selectedPrompt.id === p.id ? 'active' : ''}`;
-                li.onclick = () => selectPrompt(p.id);
+                li.className = `prompt-item ${isActive ? 'active' : ''}`;
+                li.onclick = () => selectWorkflow(w);
+
+                const viewName = w.workflow_view_name || w.workflow_name || '이름 없는 워크플로우';
+                const subTitle = w.workflow_name || w.workflow_id || 'ID 없음';
 
                 li.innerHTML = `
-                    <div class="prompt-item-name" title="${p.workflow_name}">${p.workflow_name}</div>
+                    <div class="prompt-item-name" title="${viewName}">${viewName}</div>
                     <div class="prompt-item-meta">
-                        <span class="prompt-item-node" title="${p.node_name || 'N/A'}">${p.node_name || '일반 노드'}</span>
-                        <span style="font-family: 'Rajdhani';">${p.workflow_id ? p.workflow_id.substring(0, 8) : 'N/A'}</span>
+                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="${subTitle}">${subTitle}</span>
+                        <span style="font-family: 'Rajdhani'; flex-shrink: 0;">${w.nodeCount}개 노드</span>
                     </div>
                 `;
                 listEl.appendChild(li);
             });
         }
 
-        function filterPrompts() {
+        function filterWorkflows() {
             const query = document.getElementById('searchInput').value.toLowerCase().trim();
             if (!query) {
-                renderPromptsList(allPrompts);
+                groupWorkflows();
+                renderWorkflowsList();
                 return;
             }
-            const filtered = allPrompts.filter(p => {
-                const nameMatch = p.workflow_name.toLowerCase().includes(query);
+            
+            // Search globally on allPrompts first, then group filtered results
+            const filteredPrompts = allPrompts.filter(p => {
+                const nameMatch = p.workflow_name && p.workflow_name.toLowerCase().includes(query);
+                const viewNameMatch = p.workflow_view_name && p.workflow_view_name.toLowerCase().includes(query);
                 const nodeMatch = p.node_name && p.node_name.toLowerCase().includes(query);
                 const idMatch = p.workflow_id && p.workflow_id.toLowerCase().includes(query);
-                return nameMatch || nodeMatch || idMatch;
+                return nameMatch || viewNameMatch || nodeMatch || idMatch;
             });
-            renderPromptsList(filtered);
+
+            // Regroup
+            const groups = {};
+            filteredPrompts.forEach(p => {
+                const key = p.workflow_id || p.workflow_name || 'unknown';
+                if (!groups[key]) {
+                    groups[key] = {
+                        workflow_id: p.workflow_id || '',
+                        workflow_name: p.workflow_name || '',
+                        workflow_view_name: p.workflow_view_name || '',
+                        nodeCount: 0,
+                        prompts: []
+                    };
+                }
+                if (p.workflow_view_name && !groups[key].workflow_view_name) {
+                    groups[key].workflow_view_name = p.workflow_view_name;
+                }
+                groups[key].nodeCount++;
+                groups[key].prompts.push(p);
+            });
+
+            uniqueWorkflows = Object.values(groups);
+            renderWorkflowsList();
         }
 
-        async function selectPrompt(id) {
+        function selectWorkflow(w) {
+            activeWorkflow = w;
+            
+            // Highlight in workflows list sidebar
+            document.querySelectorAll('#workflowsSidebar .prompt-item').forEach(el => el.classList.remove('active'));
+            renderWorkflowsList();
+
+            // Open second sidebar
+            document.getElementById('nodesSidebar').classList.remove('collapsed');
+            document.getElementById('selectedWorkflowViewTitle').textContent = w.workflow_view_name || w.workflow_name;
+
+            // Load nodes
+            renderNodesList();
+
+            // If we are currently viewing a prompt that does not belong to this workflow, show empty state
+            if (selectedPrompt && 
+                ((selectedPrompt.workflow_id && selectedPrompt.workflow_id !== w.workflow_id) ||
+                 (!selectedPrompt.workflow_id && selectedPrompt.workflow_name !== w.workflow_name))) {
+                document.getElementById('editorWorkspace').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'flex';
+                selectedPrompt = null;
+            }
+        }
+
+        function closeNodesSidebar() {
+            activeWorkflow = null;
+            document.getElementById('nodesSidebar').classList.add('collapsed');
+            document.querySelectorAll('#workflowsSidebar .prompt-item').forEach(el => el.classList.remove('active'));
+        }
+
+        function renderNodesList() {
+            const listEl = document.getElementById('nodesList');
+            listEl.innerHTML = '';
+
+            if (!activeWorkflow) return;
+
+            // Filter prompts for active workflow
+            const workflowNodes = allPrompts.filter(p => {
+                if (activeWorkflow.workflow_id) {
+                    return p.workflow_id === activeWorkflow.workflow_id;
+                } else {
+                    return p.workflow_name === activeWorkflow.workflow_name;
+                }
+            });
+
+            workflowNodes.forEach(n => {
+                const isActive = selectedPrompt && selectedPrompt.id === n.id;
+                const li = document.createElement('li');
+                li.className = `prompt-item ${isActive ? 'active' : ''}`;
+                li.style.padding = '14px 20px';
+                li.onclick = () => selectNode(n.id);
+
+                const nodeDispName = n.node_name || '일반 노드';
+                const changesPreview = n.changes || '변경 사항 없음';
+
+                li.innerHTML = `
+                    <div class="prompt-item-name" style="font-size: 15px;" title="${nodeDispName}">${nodeDispName}</div>
+                    <div class="prompt-item-meta">
+                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;" title="${changesPreview}">${changesPreview}</span>
+                    </div>
+                `;
+                listEl.appendChild(li);
+            });
+        }
+
+        async function selectNode(id) {
             isCreatingNew = false;
             try {
                 const res = await fetch(`/api/system-prompts/${id}`);
@@ -686,15 +890,16 @@
                     document.getElementById('editorWorkspace').style.display = 'flex';
                     
                     document.getElementById('promptIdDisplay').textContent = `ID: ${selectedPrompt.id}`;
-                    document.getElementById('workflowName').value = selectedPrompt.workflow_name;
+                    document.getElementById('workflowName').value = selectedPrompt.workflow_name || '';
+                    document.getElementById('workflowViewName').value = selectedPrompt.workflow_view_name || '';
                     document.getElementById('workflowId').value = selectedPrompt.workflow_id || '';
                     document.getElementById('nodeName').value = selectedPrompt.node_name || '';
+                    document.getElementById('changes').value = selectedPrompt.changes || '';
                     document.getElementById('promptText').value = selectedPrompt.prompt || '';
                     document.getElementById('deleteBtn').style.display = 'block';
 
-                    // Update active item class in list
-                    document.querySelectorAll('.prompt-item').forEach(el => el.classList.remove('active'));
-                    renderPromptsList(allPrompts);
+                    // Update active item class in node list
+                    renderNodesList();
                 } else {
                     showStatus('상세 내역 가져오기 실패', true);
                 }
@@ -704,12 +909,13 @@
             }
         }
 
-        function startNewPrompt() {
+        // Add a brand new workflow (collapses node sidebar first)
+        function startNewWorkflowPrompt() {
             selectedPrompt = null;
+            activeWorkflow = null;
             isCreatingNew = true;
 
-            // Remove active classes
-            document.querySelectorAll('.prompt-item').forEach(el => el.classList.remove('active'));
+            closeNodesSidebar();
 
             // Show and Clear Editor Workspace
             document.getElementById('emptyState').style.display = 'none';
@@ -717,10 +923,41 @@
             
             document.getElementById('promptIdDisplay').textContent = 'ID: NEW';
             document.getElementById('workflowName').value = '';
+            document.getElementById('workflowViewName').value = '';
             document.getElementById('workflowId').value = '';
             document.getElementById('nodeName').value = '';
+            document.getElementById('changes').value = '';
             document.getElementById('promptText').value = '';
             document.getElementById('deleteBtn').style.display = 'none';
+        }
+
+        // Add a new node under the active workflow (pre-fills workflow details!)
+        function startNewNodePrompt() {
+            if (!activeWorkflow) {
+                showStatus('먼저 워크플로우를 선택하십시오.', true);
+                return;
+            }
+
+            selectedPrompt = null;
+            isCreatingNew = true;
+
+            // Show and Pre-fill Editor Workspace
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('editorWorkspace').style.display = 'flex';
+            
+            document.getElementById('promptIdDisplay').textContent = 'ID: NEW';
+            document.getElementById('workflowName').value = activeWorkflow.workflow_name || '';
+            document.getElementById('workflowViewName').value = activeWorkflow.workflow_view_name || '';
+            document.getElementById('workflowId').value = activeWorkflow.workflow_id || '';
+            
+            // Clear prompt and node specific fields
+            document.getElementById('nodeName').value = '';
+            document.getElementById('changes').value = '';
+            document.getElementById('promptText').value = '';
+            document.getElementById('deleteBtn').style.display = 'none';
+
+            // Remove node selection highlight
+            document.querySelectorAll('#nodesSidebar .prompt-item').forEach(el => el.classList.remove('active'));
         }
 
         function cancelEditing() {
@@ -728,26 +965,28 @@
             document.getElementById('emptyState').style.display = 'flex';
             selectedPrompt = null;
             isCreatingNew = false;
-            // Update active list elements
-            document.querySelectorAll('.prompt-item').forEach(el => el.classList.remove('active'));
-            renderPromptsList(allPrompts);
+            renderNodesList();
         }
 
         async function savePrompt() {
             const workflow_name = document.getElementById('workflowName').value.trim();
+            const workflow_view_name = document.getElementById('workflowViewName').value.trim();
             const workflow_id = document.getElementById('workflowId').value.trim();
             const node_name = document.getElementById('nodeName').value.trim();
+            const changes = document.getElementById('changes').value.trim();
             const prompt = document.getElementById('promptText').value;
 
             if (!workflow_name) {
-                showStatus('워크플로우 이름은 필수 항목입니다.', true);
+                showStatus('워크플로우 실제 이름은 필수 항목입니다.', true);
                 return;
             }
 
             const bodyData = {
                 workflow_name,
+                workflow_view_name: workflow_view_name || null,
                 workflow_id: workflow_id || null,
                 node_name: node_name || null,
+                changes: changes || null,
                 prompt: prompt || null
             };
 
@@ -773,9 +1012,24 @@
                     selectedPrompt = result.prompt;
                     isCreatingNew = false;
                     
-                    // Refresh and highlight
+                    // Re-establish active workflow to match updated workflow credentials
+                    activeWorkflow = {
+                        workflow_id: selectedPrompt.workflow_id || '',
+                        workflow_name: selectedPrompt.workflow_name || '',
+                        workflow_view_name: selectedPrompt.workflow_view_name || ''
+                    };
+
                     await loadPrompts();
-                    selectPrompt(selectedPrompt.id);
+                    
+                    // Highlight the saved workflow and node
+                    const activeW = uniqueWorkflows.find(w => 
+                        w.workflow_id === activeWorkflow.workflow_id && 
+                        w.workflow_name === activeWorkflow.workflow_name
+                    );
+                    if (activeW) {
+                        selectWorkflow(activeW);
+                    }
+                    selectNode(selectedPrompt.id);
                 } else {
                     showStatus(result.error || '저장 실패', true);
                 }
@@ -787,7 +1041,7 @@
 
         async function deletePrompt() {
             if (!selectedPrompt) return;
-            if (!confirm(`워크플로우 [${selectedPrompt.workflow_name}] 의 프롬프트를 정말로 삭제하시겠습니까?`)) {
+            if (!confirm(`노드 [${selectedPrompt.node_name || '일반 노드'}] 의 프롬프트를 정말로 삭제하시겠습니까?`)) {
                 return;
             }
 
@@ -799,8 +1053,25 @@
                 
                 if (res.ok) {
                     showStatus('성공적으로 삭제되었습니다.');
+                    
+                    const deletedId = selectedPrompt.id;
                     cancelEditing();
-                    loadPrompts();
+                    
+                    // Reload all prompts from DB
+                    await loadPrompts();
+
+                    // If active workflow has no nodes remaining, collapse nodes sidebar
+                    if (activeWorkflow) {
+                        const remaining = allPrompts.filter(p => 
+                            p.workflow_id === activeWorkflow.workflow_id && 
+                            p.workflow_name === activeWorkflow.workflow_name
+                        );
+                        if (remaining.length === 0) {
+                            closeNodesSidebar();
+                        } else {
+                            renderNodesList();
+                        }
+                    }
                 } else {
                     showStatus(result.error || '삭제 실패', true);
                 }
