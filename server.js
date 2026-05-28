@@ -364,15 +364,62 @@ const requireAdminAuth = (req, res, next) => {
 // --- System Prompts CRUD Endpoints (Admin only) ---
 app.use('/api/system-prompts', requireAdminAuth);
 
-// Get all system prompts
+// Get all system prompts (only returning the most recent version of each unique prompt)
 app.get('/api/system-prompts', async (req, res) => {
     try {
-        const query = 'SELECT id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes FROM public.system_prompts ORDER BY workflow_name ASC, node_name ASC, id ASC;';
+        const query = `
+            SELECT DISTINCT ON (COALESCE(workflow_id, ''), workflow_name, node_name)
+                id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes
+            FROM public.system_prompts
+            ORDER BY COALESCE(workflow_id, ''), workflow_name, node_name, created_at DESC, id DESC;
+        `;
         const result = await pool.query(query);
         res.json({ prompts: result.rows });
     } catch (error) {
         console.error('Error fetching system prompts:', error);
         res.status(500).json({ error: 'Failed to fetch system prompts' });
+    }
+});
+
+// Get prompt history by active version ID
+app.get('/api/system-prompts/:id/history', async (req, res) => {
+    const { id } = req.params;
+    try {
+        // First get prompt metadata by ID
+        const metaQuery = 'SELECT workflow_id, workflow_name, node_name FROM public.system_prompts WHERE id = $1;';
+        const metaRes = await pool.query(metaQuery, [id]);
+        if (metaRes.rows.length === 0) {
+            return res.status(404).json({ error: 'System prompt not found' });
+        }
+        
+        const { workflow_id, workflow_name, node_name } = metaRes.rows[0];
+        
+        // Query all historical versions matching these identifiers
+        let historyQuery;
+        let params;
+        if (workflow_id) {
+            historyQuery = `
+                SELECT id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes 
+                FROM public.system_prompts 
+                WHERE workflow_id = $1 AND node_name = $2 
+                ORDER BY created_at DESC, id DESC;
+            `;
+            params = [workflow_id, node_name];
+        } else {
+            historyQuery = `
+                SELECT id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes 
+                FROM public.system_prompts 
+                WHERE workflow_name = $1 AND node_name = $2 
+                ORDER BY created_at DESC, id DESC;
+            `;
+            params = [workflow_name, node_name];
+        }
+        
+        const result = await pool.query(historyQuery, params);
+        res.json({ history: result.rows });
+    } catch (error) {
+        console.error(`Error fetching prompt history for version ${id}:`, error);
+        res.status(500).json({ error: 'Failed to fetch prompt history' });
     }
 });
 
@@ -419,18 +466,16 @@ app.post('/api/system-prompts', async (req, res) => {
     }
 });
 
-// Update a system prompt
+// Update a system prompt (inserts a new version to preserve history)
 app.put('/api/system-prompts/:id', async (req, res) => {
-    const { id } = req.params;
     const { workflow_name, workflow_id, node_name, prompt, workflow_view_name, changes } = req.body;
     if (!workflow_name) {
         return res.status(400).json({ error: 'Workflow name is required' });
     }
     try {
         const query = `
-            UPDATE public.system_prompts
-            SET workflow_name = $1, workflow_id = $2, node_name = $3, prompt = $4, workflow_view_name = $5, changes = $6
-            WHERE id = $7
+            INSERT INTO public.system_prompts (workflow_name, workflow_id, node_name, prompt, workflow_view_name, changes)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes;
         `;
         const result = await pool.query(query, [
@@ -439,16 +484,12 @@ app.put('/api/system-prompts/:id', async (req, res) => {
             node_name || null,
             prompt || null,
             workflow_view_name || null,
-            changes || null,
-            id
+            changes || null
         ]);
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: 'System prompt not found' });
-        }
         res.json({ success: true, prompt: result.rows[0] });
     } catch (error) {
-        console.error(`Error updating system prompt ${id}:`, error);
-        res.status(500).json({ error: 'Failed to update system prompt' });
+        console.error(`Error adding prompt history version:`, error);
+        res.status(500).json({ error: 'Failed to save prompt version' });
     }
 });
 
