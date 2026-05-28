@@ -12,6 +12,7 @@
         :root {
             --neon-cyan: #00f3ff;
             --neon-violet: #bd00ff;
+            --neon-amber: #ffb700;
             --bg-dark: #050a14;
             --danger: #ff2a6d;
             --success: #05ffc5;
@@ -363,6 +364,19 @@
             border-color: #666;
         }
 
+        .btn-history {
+            background: transparent;
+            border: 1px solid var(--neon-amber);
+            color: var(--neon-amber);
+            box-shadow: 0 0 10px rgba(255, 183, 0, 0.1);
+        }
+
+        .btn-history:hover {
+            background: rgba(255, 183, 0, 0.15);
+            box-shadow: 0 0 15px rgba(255, 183, 0, 0.3);
+            color: #fff;
+        }
+
         .form-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -464,6 +478,134 @@
             resize: none;
             outline: none;
             overflow-y: auto;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 10, 20, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: rgba(10, 20, 40, 0.95);
+            border: 1px solid var(--neon-amber);
+            box-shadow: 0 0 30px rgba(255, 183, 0, 0.25);
+            border-radius: 12px;
+            width: 80%;
+            max-width: 780px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: modalFadeIn 0.25s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from { transform: scale(0.96); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 183, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--neon-amber);
+            font-size: 18px;
+            text-shadow: 0 0 8px rgba(255, 183, 0, 0.3);
+        }
+
+        .modal-header .close-btn {
+            background: transparent;
+            border: none;
+            color: #8892b0;
+            font-size: 24px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .modal-header .close-btn:hover {
+            color: var(--danger);
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .history-table th, .history-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .history-table th {
+            background: rgba(255, 183, 0, 0.08);
+            color: var(--neon-amber);
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 500;
+        }
+
+        .history-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .btn-history-view {
+            background: rgba(255, 183, 0, 0.1);
+            border: 1px solid rgba(255, 183, 0, 0.4);
+            color: var(--neon-amber);
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .btn-history-view:hover {
+            background: rgba(255, 183, 0, 0.25);
+            box-shadow: 0 0 8px rgba(255, 183, 0, 0.2);
+        }
+
+        .btn-history-del {
+            background: rgba(255, 42, 109, 0.1);
+            border: 1px solid rgba(255, 42, 109, 0.4);
+            color: var(--danger);
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            transition: all 0.2s;
+            margin-left: 6px;
+        }
+
+        .btn-history-del:hover {
+            background: rgba(255, 42, 109, 0.25);
+            box-shadow: 0 0 8px rgba(255, 42, 109, 0.2);
         }
 
         /* Notifications style */
@@ -568,6 +710,7 @@
                     </div>
                     <div class="action-buttons">
                         <button class="btn btn-cancel" onclick="cancelEditing()">취소</button>
+                        <button class="btn btn-history" id="historyBtn" onclick="showHistory()" style="display: none;">이력 (History)</button>
                         <button class="btn btn-delete" id="deleteBtn" onclick="deletePrompt()">삭제</button>
                         <button class="btn btn-save" onclick="savePrompt()">저장</button>
                     </div>
@@ -598,7 +741,7 @@
 
                 <div class="prompt-editor-container">
                     <div class="prompt-editor-header">
-                        <div class="prompt-editor-title">SYSTEM PROMPT CODE</div>
+                        <div class="prompt-editor-title" id="promptEditorTitle">SYSTEM PROMPT CODE</div>
                         <div class="editor-utils">
                             <button class="util-btn" onclick="copyPrompt()">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -610,6 +753,21 @@
                         </div>
                     </div>
                     <textarea id="promptText" class="prompt-textarea" placeholder="여기에 프롬프트 내용을 작성하세요..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>버전 변경 이력</h3>
+                <button class="close-btn" onclick="closeHistory()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="historyListContainer">
+                    <!-- Javascript will populate history table here -->
                 </div>
             </div>
         </div>
@@ -651,6 +809,7 @@
         let activeWorkflow = null;
         let selectedPrompt = null;
         let isCreatingNew = false;
+        let loadedHistoryList = [];
 
         function showStatus(msg, isError = false) {
             const el = document.getElementById('statusMessage');
@@ -711,7 +870,6 @@
         function groupWorkflows() {
             const groups = {};
             allPrompts.forEach(p => {
-                // Key is workflow_id, fallback to workflow_name
                 const key = p.workflow_id || p.workflow_name || 'unknown';
                 if (!groups[key]) {
                     groups[key] = {
@@ -723,11 +881,9 @@
                     };
                 }
                 
-                // Keep the workflow_view_name from first non-empty value
                 if (p.workflow_view_name && !groups[key].workflow_view_name) {
                     groups[key].workflow_view_name = p.workflow_view_name;
                 }
-                // Fallback workflow_name if not already populated
                 if (p.workflow_name && !groups[key].workflow_name) {
                     groups[key].workflow_name = p.workflow_name;
                 }
@@ -779,7 +935,6 @@
                 return;
             }
             
-            // Search globally on allPrompts first, then group filtered results
             const filteredPrompts = allPrompts.filter(p => {
                 const nameMatch = p.workflow_name && p.workflow_name.toLowerCase().includes(query);
                 const viewNameMatch = p.workflow_view_name && p.workflow_view_name.toLowerCase().includes(query);
@@ -788,7 +943,6 @@
                 return nameMatch || viewNameMatch || nodeMatch || idMatch;
             });
 
-            // Regroup
             const groups = {};
             filteredPrompts.forEach(p => {
                 const key = p.workflow_id || p.workflow_name || 'unknown';
@@ -815,18 +969,14 @@
         function selectWorkflow(w) {
             activeWorkflow = w;
             
-            // Highlight in workflows list sidebar
             document.querySelectorAll('#workflowsSidebar .prompt-item').forEach(el => el.classList.remove('active'));
             renderWorkflowsList();
 
-            // Open second sidebar
             document.getElementById('nodesSidebar').classList.remove('collapsed');
             document.getElementById('selectedWorkflowViewTitle').textContent = w.workflow_view_name || w.workflow_name;
 
-            // Load nodes
             renderNodesList();
 
-            // If we are currently viewing a prompt that does not belong to this workflow, show empty state
             if (selectedPrompt && 
                 ((selectedPrompt.workflow_id && selectedPrompt.workflow_id !== w.workflow_id) ||
                  (!selectedPrompt.workflow_id && selectedPrompt.workflow_name !== w.workflow_name))) {
@@ -848,7 +998,6 @@
 
             if (!activeWorkflow) return;
 
-            // Filter prompts for active workflow
             const workflowNodes = allPrompts.filter(p => {
                 if (activeWorkflow.workflow_id) {
                     return p.workflow_id === activeWorkflow.workflow_id;
@@ -897,6 +1046,8 @@
                     document.getElementById('changes').value = selectedPrompt.changes || '';
                     document.getElementById('promptText').value = selectedPrompt.prompt || '';
                     document.getElementById('deleteBtn').style.display = 'block';
+                    document.getElementById('historyBtn').style.display = 'block';
+                    document.getElementById('promptEditorTitle').textContent = 'SYSTEM PROMPT CODE';
 
                     // Update active item class in node list
                     renderNodesList();
@@ -909,7 +1060,6 @@
             }
         }
 
-        // Add a brand new workflow (collapses node sidebar first)
         function startNewWorkflowPrompt() {
             selectedPrompt = null;
             activeWorkflow = null;
@@ -917,7 +1067,6 @@
 
             closeNodesSidebar();
 
-            // Show and Clear Editor Workspace
             document.getElementById('emptyState').style.display = 'none';
             document.getElementById('editorWorkspace').style.display = 'flex';
             
@@ -929,9 +1078,10 @@
             document.getElementById('changes').value = '';
             document.getElementById('promptText').value = '';
             document.getElementById('deleteBtn').style.display = 'none';
+            document.getElementById('historyBtn').style.display = 'none';
+            document.getElementById('promptEditorTitle').textContent = 'SYSTEM PROMPT CODE';
         }
 
-        // Add a new node under the active workflow (pre-fills workflow details!)
         function startNewNodePrompt() {
             if (!activeWorkflow) {
                 showStatus('먼저 워크플로우를 선택하십시오.', true);
@@ -941,7 +1091,6 @@
             selectedPrompt = null;
             isCreatingNew = true;
 
-            // Show and Pre-fill Editor Workspace
             document.getElementById('emptyState').style.display = 'none';
             document.getElementById('editorWorkspace').style.display = 'flex';
             
@@ -950,13 +1099,13 @@
             document.getElementById('workflowViewName').value = activeWorkflow.workflow_view_name || '';
             document.getElementById('workflowId').value = activeWorkflow.workflow_id || '';
             
-            // Clear prompt and node specific fields
             document.getElementById('nodeName').value = '';
             document.getElementById('changes').value = '';
             document.getElementById('promptText').value = '';
             document.getElementById('deleteBtn').style.display = 'none';
+            document.getElementById('historyBtn').style.display = 'none';
+            document.getElementById('promptEditorTitle').textContent = 'SYSTEM PROMPT CODE';
 
-            // Remove node selection highlight
             document.querySelectorAll('#nodesSidebar .prompt-item').forEach(el => el.classList.remove('active'));
         }
 
@@ -992,6 +1141,7 @@
 
             try {
                 let res;
+                // If isCreatingNew is true, we do a POST. If false, we do a PUT (which does an INSERT on the backend to preserve history)
                 if (isCreatingNew) {
                     res = await fetch('/api/system-prompts', {
                         method: 'POST',
@@ -1008,11 +1158,10 @@
 
                 const result = await res.json();
                 if (res.ok) {
-                    showStatus('프롬프트가 성공적으로 저장되었습니다.');
+                    showStatus('프롬프트 버전이 성공적으로 저장되었습니다.');
                     selectedPrompt = result.prompt;
                     isCreatingNew = false;
                     
-                    // Re-establish active workflow to match updated workflow credentials
                     activeWorkflow = {
                         workflow_id: selectedPrompt.workflow_id || '',
                         workflow_name: selectedPrompt.workflow_name || '',
@@ -1021,7 +1170,6 @@
 
                     await loadPrompts();
                     
-                    // Highlight the saved workflow and node
                     const activeW = uniqueWorkflows.find(w => 
                         w.workflow_id === activeWorkflow.workflow_id && 
                         w.workflow_name === activeWorkflow.workflow_name
@@ -1053,14 +1201,9 @@
                 
                 if (res.ok) {
                     showStatus('성공적으로 삭제되었습니다.');
-                    
-                    const deletedId = selectedPrompt.id;
                     cancelEditing();
-                    
-                    // Reload all prompts from DB
                     await loadPrompts();
 
-                    // If active workflow has no nodes remaining, collapse nodes sidebar
                     if (activeWorkflow) {
                         const remaining = allPrompts.filter(p => 
                             p.workflow_id === activeWorkflow.workflow_id && 
@@ -1090,6 +1233,133 @@
             navigator.clipboard.writeText(promptText)
                 .then(() => showStatus('클립보드에 복사 완료!'))
                 .catch(() => showStatus('복사 실패', true));
+        }
+
+        // Version History Modal functions
+        async function showHistory() {
+            if (!selectedPrompt) return;
+            const container = document.getElementById('historyListContainer');
+            container.innerHTML = '<div style="color: #aaa; text-align: center; padding: 20px;">이력을 로드하는 중...</div>';
+            
+            document.getElementById('historyModal').style.display = 'flex';
+
+            try {
+                const res = await fetch(`/api/system-prompts/${selectedPrompt.id}/history`);
+                if (res.ok) {
+                    const data = await res.json();
+                    loadedHistoryList = data.history;
+                    renderHistoryTable(loadedHistoryList);
+                } else {
+                    container.innerHTML = '<div style="color: var(--danger); text-align: center; padding: 20px;">이력을 가져오는데 실패했습니다.</div>';
+                }
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = '<div style="color: var(--danger); text-align: center; padding: 20px;">네트워크 에러가 발생했습니다.</div>';
+            }
+        }
+
+        function closeHistory() {
+            document.getElementById('historyModal').style.display = 'none';
+        }
+
+        function renderHistoryTable(history) {
+            const container = document.getElementById('historyListContainer');
+            if (history.length === 0) {
+                container.innerHTML = '<div style="color: #aaa; text-align: center; padding: 20px;">등록된 이력이 없습니다.</div>';
+                return;
+            }
+
+            let html = `
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">ID</th>
+                            <th style="width: 180px;">저장 날짜</th>
+                            <th>변경 사항</th>
+                            <th style="width: 140px; text-align: center;">작업</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            history.forEach(item => {
+                const dateStr = new Date(item.created_at).toLocaleString('ko-KR');
+                const isCurrent = item.id === selectedPrompt.id;
+                const changesStr = item.changes || '<span style="color: #666; font-style: italic;">기록 없음</span>';
+                
+                html += `
+                    <tr style="${isCurrent ? 'background: rgba(255, 183, 0, 0.05);' : ''}">
+                        <td style="font-family: 'Rajdhani'; font-weight: bold;">
+                            ${item.id} ${isCurrent ? '<span style="color: var(--neon-amber); font-size: 11px; margin-left: 4px;">(현재)</span>' : ''}
+                        </td>
+                        <td style="color: #aaa; font-size: 13px;">${dateStr}</td>
+                        <td style="color: #eee;">${changesStr}</td>
+                        <td style="text-align: center;">
+                            <button class="btn-history-view" onclick="loadHistoryVersion(${item.id})">보기</button>
+                            <button class="btn-history-del" onclick="deleteHistoryVersion(${item.id})">삭제</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function loadHistoryVersion(id) {
+            const version = loadedHistoryList.find(v => v.id === id);
+            if (!version) return;
+
+            // Load into editor workspace
+            document.getElementById('promptText').value = version.prompt || '';
+            document.getElementById('changes').value = `Reverted to version ${id}: ${version.changes || ''}`.substring(0, 200);
+            
+            // Visually denote version state
+            document.getElementById('promptEditorTitle').textContent = `SYSTEM PROMPT CODE (Viewing past version #${id})`;
+            
+            showStatus(`버전 #${id}이(가) 편집기에 로드되었습니다. 저장을 누르면 새로운 현재 버전이 됩니다.`);
+            closeHistory();
+        }
+
+        async function deleteHistoryVersion(id) {
+            if (!confirm(`버전 #${id}의 변경 이력을 영구히 삭제하시겠습니까?`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/system-prompts/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (res.ok) {
+                    showStatus(`버전 #${id}이(가) 삭제되었습니다.`);
+                    
+                    // If the deleted version was the active version we are currently editing
+                    if (selectedPrompt && selectedPrompt.id === id) {
+                        closeHistory();
+                        cancelEditing();
+                        await loadPrompts();
+                    } else {
+                        // Just reload history list in modal and prompts list
+                        await loadPrompts();
+                        // Re-fetch history
+                        const historyRes = await fetch(`/api/system-prompts/${selectedPrompt.id}/history`);
+                        if (historyRes.ok) {
+                            const data = await historyRes.json();
+                            loadedHistoryList = data.history;
+                            renderHistoryTable(loadedHistoryList);
+                        } else {
+                            closeHistory();
+                        }
+                    }
+                } else {
+                    const result = await res.json();
+                    showStatus(result.error || '삭제 실패', true);
+                }
+            } catch (err) {
+                console.error(err);
+                showStatus('네트워크 에러 발생', true);
+            }
         }
 
         // Initialize
