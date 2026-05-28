@@ -205,7 +205,6 @@
                             <p style="font-size: 0.9em; opacity: 0.8; margin-top: 5px;">Role: ${user.role.toUpperCase()}</p>
                         </div>
                         <a href="basic_analysis.html" class="nav-btn">기본물류분석</a>
-                        // <a href="basic_analysis.html" class="nav-btn secondary">주류분석</a>
                     `;
                     if (user.role === 'admin' || user.role === 'superuser') {
                         html += `<a href="admin.html" class="nav-btn secondary">Admin Page (관리자)</a>`;
