@@ -733,7 +733,11 @@
                         <label class="form-label" for="nodeName">노드 이름</label>
                         <input type="text" id="nodeName" class="form-control" placeholder="예: Generate Analysis Code">
                     </div>
-                    <div class="form-group" style="grid-column: span 2;">
+                    <div class="form-group">
+                        <label class="form-label" for="model">적용 모델 (Model)</label>
+                        <input type="text" id="model" class="form-control" placeholder="예: gemini-1.5-pro">
+                    </div>
+                    <div class="form-group">
                         <label class="form-label" for="changes">변경 사항 (Changes)</label>
                         <input type="text" id="changes" class="form-control" placeholder="예: v1.0.1 - 차량번호 감지 정규식 수정">
                     </div>
@@ -1043,6 +1047,7 @@
                     document.getElementById('workflowViewName').value = selectedPrompt.workflow_view_name || '';
                     document.getElementById('workflowId').value = selectedPrompt.workflow_id || '';
                     document.getElementById('nodeName').value = selectedPrompt.node_name || '';
+                    document.getElementById('model').value = selectedPrompt.model || '';
                     document.getElementById('changes').value = selectedPrompt.changes || '';
                     document.getElementById('promptText').value = selectedPrompt.prompt || '';
                     document.getElementById('deleteBtn').style.display = 'block';
@@ -1075,6 +1080,7 @@
             document.getElementById('workflowViewName').value = '';
             document.getElementById('workflowId').value = '';
             document.getElementById('nodeName').value = '';
+            document.getElementById('model').value = '';
             document.getElementById('changes').value = '';
             document.getElementById('promptText').value = '';
             document.getElementById('deleteBtn').style.display = 'none';
@@ -1100,6 +1106,7 @@
             document.getElementById('workflowId').value = activeWorkflow.workflow_id || '';
             
             document.getElementById('nodeName').value = '';
+            document.getElementById('model').value = '';
             document.getElementById('changes').value = '';
             document.getElementById('promptText').value = '';
             document.getElementById('deleteBtn').style.display = 'none';
@@ -1122,6 +1129,7 @@
             const workflow_view_name = document.getElementById('workflowViewName').value.trim();
             const workflow_id = document.getElementById('workflowId').value.trim();
             const node_name = document.getElementById('nodeName').value.trim();
+            const model = document.getElementById('model').value.trim();
             const changes = document.getElementById('changes').value.trim();
             const prompt = document.getElementById('promptText').value;
 
@@ -1135,6 +1143,7 @@
                 workflow_view_name: workflow_view_name || null,
                 workflow_id: workflow_id || null,
                 node_name: node_name || null,
+                model: model || null,
                 changes: changes || null,
                 prompt: prompt || null
             };
@@ -1312,6 +1321,7 @@
 
             // Load into editor workspace
             document.getElementById('promptText').value = version.prompt || '';
+            document.getElementById('model').value = version.model || '';
             document.getElementById('changes').value = `Reverted to version ${id}: ${version.changes || ''}`.substring(0, 200);
             
             // Visually denote version state
