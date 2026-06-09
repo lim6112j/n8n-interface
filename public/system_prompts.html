@@ -803,7 +803,12 @@
                         <input type="text" id="model" class="form-control" placeholder="예: google/gemini-2.0-flash" onfocus="showModelDropdown()" oninput="filterModels()" onblur="hideModelDropdown()" autocomplete="off">
                         <div id="modelDropdown" class="model-dropdown"></div>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group model-dropdown-container">
+                        <label class="form-label" for="local_model">로컬 모델 (Local Model)</label>
+                        <input type="text" id="local_model" class="form-control" placeholder="예: llama3:latest" onfocus="showLocalModelDropdown()" oninput="filterLocalModels()" onblur="hideLocalModelDropdown()" autocomplete="off">
+                        <div id="localModelDropdown" class="model-dropdown"></div>
+                    </div>
+                    <div class="form-group" style="grid-column: span 3;">
                         <label class="form-label" for="changes">변경 사항 (Changes)</label>
                         <input type="text" id="changes" class="form-control" placeholder="예: v1.0.1 - 차량번호 감지 정규식 수정">
                     </div>
@@ -1114,6 +1119,7 @@
                     document.getElementById('workflowId').value = selectedPrompt.workflow_id || '';
                     document.getElementById('nodeName').value = selectedPrompt.node_name || '';
                     document.getElementById('model').value = selectedPrompt.model || '';
+                    document.getElementById('local_model').value = selectedPrompt.local_model || '';
                     document.getElementById('changes').value = selectedPrompt.changes || '';
                     document.getElementById('promptText').value = selectedPrompt.prompt || '';
                     document.getElementById('deleteBtn').style.display = 'block';
@@ -1147,6 +1153,7 @@
             document.getElementById('workflowId').value = '';
             document.getElementById('nodeName').value = '';
             document.getElementById('model').value = '';
+            document.getElementById('local_model').value = '';
             document.getElementById('changes').value = '';
             document.getElementById('promptText').value = '';
             document.getElementById('deleteBtn').style.display = 'none';
@@ -1173,6 +1180,7 @@
             
             document.getElementById('nodeName').value = '';
             document.getElementById('model').value = '';
+            document.getElementById('local_model').value = '';
             document.getElementById('changes').value = '';
             document.getElementById('promptText').value = '';
             document.getElementById('deleteBtn').style.display = 'none';
@@ -1196,6 +1204,7 @@
             const workflow_id = document.getElementById('workflowId').value.trim();
             const node_name = document.getElementById('nodeName').value.trim();
             const model = document.getElementById('model').value.trim();
+            const local_model = document.getElementById('local_model').value.trim();
             const changes = document.getElementById('changes').value.trim();
             const prompt = document.getElementById('promptText').value;
 
@@ -1210,6 +1219,7 @@
                 workflow_id: workflow_id || null,
                 node_name: node_name || null,
                 model: model || null,
+                local_model: local_model || null,
                 changes: changes || null,
                 prompt: prompt || null
             };
@@ -1388,6 +1398,7 @@
             // Load into editor workspace
             document.getElementById('promptText').value = version.prompt || '';
             document.getElementById('model').value = version.model || '';
+            document.getElementById('local_model').value = version.local_model || '';
             document.getElementById('changes').value = `Reverted to version ${id}: ${version.changes || ''}`.substring(0, 200);
             
             // Visually denote version state
@@ -1516,11 +1527,89 @@
             hideModelDropdown();
         }
 
+        // Ollama local models searchable dropdown logic
+        let ollamaModels = [];
+
+        async function loadOllamaModels() {
+            try {
+                const res = await fetch('/api/ollama-models');
+                if (res.ok) {
+                    const data = await res.json();
+                    ollamaModels = data.models || [];
+                    populateLocalModelDropdown(ollamaModels);
+                }
+            } catch (err) {
+                console.error('Ollama 모델 목록 로드 실패', err);
+            }
+        }
+
+        function populateLocalModelDropdown(modelsList) {
+            const dropdown = document.getElementById('localModelDropdown');
+            if (!dropdown) return;
+            dropdown.innerHTML = '';
+
+            if (modelsList.length === 0) {
+                dropdown.innerHTML = '<div style="padding: 12px; color: #8892b0; font-size: 13px; text-align: center;">검색 결과가 없습니다.</div>';
+                return;
+            }
+
+            modelsList.forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'model-dropdown-item';
+                item.onmousedown = (e) => {
+                    e.preventDefault(); // Prevent input blur
+                    selectLocalModel(m.id);
+                };
+
+                item.innerHTML = `
+                    <div class="model-name">${m.name || m.id}</div>
+                    <div class="model-id">${m.id}</div>
+                `;
+                dropdown.appendChild(item);
+            });
+        }
+
+        function showLocalModelDropdown() {
+            const dropdown = document.getElementById('localModelDropdown');
+            if (dropdown) {
+                dropdown.style.display = 'block';
+                filterLocalModels();
+            }
+        }
+
+        function hideLocalModelDropdown() {
+            const dropdown = document.getElementById('localModelDropdown');
+            if (dropdown) dropdown.style.display = 'none';
+        }
+
+        function filterLocalModels() {
+            const query = document.getElementById('local_model').value.toLowerCase().trim();
+            if (!query) {
+                populateLocalModelDropdown(ollamaModels);
+                return;
+            }
+
+            const filtered = ollamaModels.filter(m => 
+                (m.name && m.name.toLowerCase().includes(query)) || 
+                (m.id && m.id.toLowerCase().includes(query))
+            );
+            populateLocalModelDropdown(filtered);
+        }
+
+        function selectLocalModel(modelId) {
+            const modelInput = document.getElementById('local_model');
+            if (modelInput) {
+                modelInput.value = modelId;
+            }
+            hideLocalModelDropdown();
+        }
+
         // Initialize
         async function init() {
             await verifyAuth();
             await loadPrompts();
             await loadOpenRouterModels();
+            await loadOllamaModels();
         }
         init();
     </script>

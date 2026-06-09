@@ -397,6 +397,29 @@ app.get('/api/openrouter-models', requireAdminAuth, async (req, res) => {
     }
 });
 
+// Get list of Ollama models (Admin only)
+app.get('/api/ollama-models', requireAdminAuth, async (req, res) => {
+    try {
+        const response = await axios.get('http://localhost:11434/api/tags', {
+            timeout: 5000,
+            httpAgent: httpAgent,
+            httpsAgent: httpsAgent
+        });
+
+        if (response.data && Array.isArray(response.data.models)) {
+            const models = response.data.models.map(m => ({
+                id: m.model || m.name,
+                name: m.name
+            }));
+            return res.json({ models });
+        }
+        res.json({ models: [] });
+    } catch (error) {
+        console.error('Error fetching Ollama models:', error.message);
+        res.json({ models: [], error: 'Ollama is offline or unavailable' });
+    }
+});
+
 // --- System Prompts CRUD Endpoints (Admin only) ---
 app.use('/api/system-prompts', requireAdminAuth);
 
@@ -405,7 +428,7 @@ app.get('/api/system-prompts', async (req, res) => {
     try {
         const query = `
             SELECT DISTINCT ON (COALESCE(workflow_id, ''), workflow_name, node_name)
-                id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes, model
+                id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes, model, local_model
             FROM public.system_prompts
             ORDER BY COALESCE(workflow_id, ''), workflow_name, node_name, created_at DESC, id DESC;
         `;
@@ -435,7 +458,7 @@ app.get('/api/system-prompts/:id/history', async (req, res) => {
         let params;
         if (workflow_id) {
             historyQuery = `
-                SELECT id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes, model 
+                SELECT id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes, model, local_model 
                 FROM public.system_prompts 
                 WHERE workflow_id = $1 AND node_name = $2 
                 ORDER BY created_at DESC, id DESC;
@@ -443,7 +466,7 @@ app.get('/api/system-prompts/:id/history', async (req, res) => {
             params = [workflow_id, node_name];
         } else {
             historyQuery = `
-                SELECT id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes, model 
+                SELECT id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes, model, local_model 
                 FROM public.system_prompts 
                 WHERE workflow_name = $1 AND node_name = $2 
                 ORDER BY created_at DESC, id DESC;
@@ -463,7 +486,7 @@ app.get('/api/system-prompts/:id/history', async (req, res) => {
 app.get('/api/system-prompts/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        const query = 'SELECT id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes, model FROM public.system_prompts WHERE id = $1;';
+        const query = 'SELECT id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes, model, local_model FROM public.system_prompts WHERE id = $1;';
         const result = await pool.query(query, [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'System prompt not found' });
@@ -477,15 +500,15 @@ app.get('/api/system-prompts/:id', async (req, res) => {
 
 // Create a new system prompt
 app.post('/api/system-prompts', async (req, res) => {
-    const { workflow_name, workflow_id, node_name, prompt, workflow_view_name, changes, model } = req.body;
+    const { workflow_name, workflow_id, node_name, prompt, workflow_view_name, changes, model, local_model } = req.body;
     if (!workflow_name) {
         return res.status(400).json({ error: 'Workflow name is required' });
     }
     try {
         const query = `
-            INSERT INTO public.system_prompts (workflow_name, workflow_id, node_name, prompt, workflow_view_name, changes, model)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes, model;
+            INSERT INTO public.system_prompts (workflow_name, workflow_id, node_name, prompt, workflow_view_name, changes, model, local_model)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes, model, local_model;
         `;
         const result = await pool.query(query, [
             workflow_name,
@@ -494,7 +517,8 @@ app.post('/api/system-prompts', async (req, res) => {
             prompt || null,
             workflow_view_name || null,
             changes || null,
-            model || null
+            model || null,
+            local_model || null
         ]);
         res.status(201).json({ success: true, prompt: result.rows[0] });
     } catch (error) {
@@ -505,15 +529,15 @@ app.post('/api/system-prompts', async (req, res) => {
 
 // Update a system prompt (inserts a new version to preserve history)
 app.put('/api/system-prompts/:id', async (req, res) => {
-    const { workflow_name, workflow_id, node_name, prompt, workflow_view_name, changes, model } = req.body;
+    const { workflow_name, workflow_id, node_name, prompt, workflow_view_name, changes, model, local_model } = req.body;
     if (!workflow_name) {
         return res.status(400).json({ error: 'Workflow name is required' });
     }
     try {
         const query = `
-            INSERT INTO public.system_prompts (workflow_name, workflow_id, node_name, prompt, workflow_view_name, changes, model)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes, model;
+            INSERT INTO public.system_prompts (workflow_name, workflow_id, node_name, prompt, workflow_view_name, changes, model, local_model)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id, workflow_name, workflow_id, node_name, prompt, created_at, workflow_view_name, changes, model, local_model;
         `;
         const result = await pool.query(query, [
             workflow_name,
@@ -522,7 +546,8 @@ app.put('/api/system-prompts/:id', async (req, res) => {
             prompt || null,
             workflow_view_name || null,
             changes || null,
-            model || null
+            model || null,
+            local_model || null
         ]);
         res.json({ success: true, prompt: result.rows[0] });
     } catch (error) {
