@@ -361,6 +361,42 @@ const requireAdminAuth = (req, res, next) => {
     next();
 };
 
+// Get list of OpenRouter models with 1-hour cache (Admin only)
+let openRouterModelsCache = null;
+let lastCacheTime = 0;
+const CACHE_DURATION = 3600 * 1000; // 1 hour
+
+app.get('/api/openrouter-models', requireAdminAuth, async (req, res) => {
+    try {
+        const now = Date.now();
+        if (openRouterModelsCache && (now - lastCacheTime < CACHE_DURATION)) {
+            return res.json({ models: openRouterModelsCache });
+        }
+
+        const response = await axios.get('https://openrouter.ai/api/v1/models', {
+            timeout: 15000,
+            httpAgent: httpAgent,
+            httpsAgent: httpsAgent
+        });
+
+        if (response.data && Array.isArray(response.data.data)) {
+            openRouterModelsCache = response.data.data.map(m => ({
+                id: m.id,
+                name: m.name
+            }));
+            lastCacheTime = now;
+            return res.json({ models: openRouterModelsCache });
+        }
+        res.status(502).json({ error: 'Invalid response from OpenRouter' });
+    } catch (error) {
+        console.error('Error fetching OpenRouter models:', error.message);
+        if (openRouterModelsCache) {
+            return res.json({ models: openRouterModelsCache, fallback: true });
+        }
+        res.status(500).json({ error: 'Failed to fetch models', details: error.message });
+    }
+});
+
 // --- System Prompts CRUD Endpoints (Admin only) ---
 app.use('/api/system-prompts', requireAdminAuth);
 

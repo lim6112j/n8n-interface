@@ -638,6 +638,71 @@
             border: 1px solid var(--danger);
             box-shadow: 0 0 15px rgba(255, 42, 109, 0.15) !important;
         }
+        /* OpenRouter models dropdown list custom styling */
+        .model-dropdown-container {
+            position: relative;
+        }
+
+        .model-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(10, 20, 40, 0.95);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            border-radius: 6px;
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 5px 25px rgba(0, 243, 255, 0.25);
+            margin-top: 5px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--neon-cyan) rgba(0, 0, 0, 0.3);
+        }
+
+        .model-dropdown::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .model-dropdown::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 3px;
+        }
+
+        .model-dropdown::-webkit-scrollbar-thumb {
+            background: var(--neon-cyan);
+            border-radius: 3px;
+        }
+
+        .model-dropdown-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            text-align: left;
+        }
+
+        .model-dropdown-item:hover {
+            background: rgba(0, 243, 255, 0.15);
+            color: var(--neon-cyan);
+            box-shadow: inset 0 0 8px rgba(0, 243, 255, 0.1);
+        }
+
+        .model-dropdown-item .model-name {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .model-dropdown-item .model-id {
+            font-size: 11px;
+            color: #8892b0;
+            font-family: monospace;
+        }
     </style>
 </head>
 
@@ -733,9 +798,10 @@
                         <label class="form-label" for="nodeName">노드 이름</label>
                         <input type="text" id="nodeName" class="form-control" placeholder="예: Generate Analysis Code">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group model-dropdown-container">
                         <label class="form-label" for="model">적용 모델 (Model)</label>
-                        <input type="text" id="model" class="form-control" placeholder="예: gemini-1.5-pro">
+                        <input type="text" id="model" class="form-control" placeholder="예: google/gemini-2.0-flash" onfocus="showModelDropdown()" oninput="filterModels()" onblur="hideModelDropdown()" autocomplete="off">
+                        <div id="modelDropdown" class="model-dropdown"></div>
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="changes">변경 사항 (Changes)</label>
@@ -1372,10 +1438,89 @@
             }
         }
 
+        // OpenRouter models searchable dropdown logic
+        let openRouterModels = [];
+
+        async function loadOpenRouterModels() {
+            try {
+                const res = await fetch('/api/openrouter-models');
+                if (res.ok) {
+                    const data = await res.json();
+                    openRouterModels = data.models || [];
+                    populateModelDropdown(openRouterModels);
+                }
+            } catch (err) {
+                console.error('OpenRouter 모델 목록 로드 실패', err);
+            }
+        }
+
+        function populateModelDropdown(modelsList) {
+            const dropdown = document.getElementById('modelDropdown');
+            if (!dropdown) return;
+            dropdown.innerHTML = '';
+
+            if (modelsList.length === 0) {
+                dropdown.innerHTML = '<div style="padding: 12px; color: #8892b0; font-size: 13px; text-align: center;">검색 결과가 없습니다.</div>';
+                return;
+            }
+
+            modelsList.forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'model-dropdown-item';
+                // Use mousedown instead of click because mousedown fires BEFORE the input blur event triggers hideModelDropdown
+                item.onmousedown = (e) => {
+                    e.preventDefault(); // Prevent text input blur
+                    selectModel(m.id);
+                };
+
+                item.innerHTML = `
+                    <div class="model-name">${m.name || m.id}</div>
+                    <div class="model-id">${m.id}</div>
+                `;
+                dropdown.appendChild(item);
+            });
+        }
+
+        function showModelDropdown() {
+            const dropdown = document.getElementById('modelDropdown');
+            if (dropdown) {
+                dropdown.style.display = 'block';
+                filterModels();
+            }
+        }
+
+        function hideModelDropdown() {
+            const dropdown = document.getElementById('modelDropdown');
+            if (dropdown) dropdown.style.display = 'none';
+        }
+
+        function filterModels() {
+            const query = document.getElementById('model').value.toLowerCase().trim();
+            if (!query) {
+                populateModelDropdown(openRouterModels);
+                return;
+            }
+
+            const filtered = openRouterModels.filter(m => 
+                (m.name && m.name.toLowerCase().includes(query)) || 
+                (m.id && m.id.toLowerCase().includes(query))
+            );
+            populateModelDropdown(filtered);
+        }
+
+        function selectModel(modelId) {
+            const modelInput = document.getElementById('model');
+            if (modelInput) {
+                modelInput.value = modelId;
+            }
+            hideModelDropdown();
+        }
+
         // Initialize
         async function init() {
             await verifyAuth();
             await loadPrompts();
+            await loadOpenRouterModels();
         }
         init();
     </script>
