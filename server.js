@@ -110,7 +110,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Reverse Proxy for n8n Forms and Wait node states
-app.all(['/form/*', '/form-waiting/*'], (req, res, next) => {
+app.all([/^\/form(\/.*)?$/, /^\/form-waiting(\/.*)?$/], (req, res, next) => {
     if (!req.isAuthenticated()) {
         return res.status(401).send('Unauthorized');
     }
