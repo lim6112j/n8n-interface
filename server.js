@@ -125,19 +125,17 @@ app.all([/^\/form(\/.*)?$/, /^\/form-waiting(\/.*)?$/], (req, res, next) => {
         return res.sendStatus(204);
     }
 
-    const targetUrl = `http://localhost:5678${req.originalUrl}`;
-    console.log(`[proxy] Proxying ${req.method} ${req.originalUrl} -> ${targetUrl}`);
+    console.log(`[proxy] Proxying ${req.method} ${req.originalUrl} -> http://127.0.0.1:5678${req.originalUrl}`);
 
-    const parsedUrl = new URL(targetUrl);
     const proxyHeaders = { ...req.headers };
     // Strip accept-encoding to ensure n8n doesn't compress responses (enables easy string replacing)
     delete proxyHeaders['accept-encoding'];
-    proxyHeaders['host'] = parsedUrl.host;
+    proxyHeaders['host'] = 'localhost:5678';
 
     const options = {
-        hostname: parsedUrl.hostname,
-        port: parsedUrl.port || 80,
-        path: parsedUrl.pathname + parsedUrl.search,
+        hostname: '127.0.0.1',
+        port: 5678,
+        path: req.originalUrl,
         method: req.method,
         headers: proxyHeaders
     };
