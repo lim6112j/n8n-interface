@@ -125,10 +125,6 @@ app.all([/^\/form(\/.*)?$/, /^\/form-waiting(\/.*)?$/], (req, res, next) => {
         return res.sendStatus(204);
     }
 
-    if (!req.isAuthenticated()) {
-        return res.status(401).send('Unauthorized');
-    }
-
     const targetUrl = `http://localhost:5678${req.originalUrl}`;
     console.log(`[proxy] Proxying ${req.method} ${req.originalUrl} -> ${targetUrl}`);
 
