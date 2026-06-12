@@ -129,15 +129,17 @@ app.all([/^\/form(\/.*)?$/, /^\/form-waiting(\/.*)?$/], (req, res, next) => {
     console.log(`[proxy] Proxying ${req.method} ${req.originalUrl} -> ${targetUrl}`);
 
     const parsedUrl = new URL(targetUrl);
+    const proxyHeaders = { ...req.headers };
+    // Strip accept-encoding to ensure n8n doesn't compress responses (enables easy string replacing)
+    delete proxyHeaders['accept-encoding'];
+    proxyHeaders['host'] = parsedUrl.host;
+
     const options = {
         hostname: parsedUrl.hostname,
         port: parsedUrl.port || 80,
         path: parsedUrl.pathname + parsedUrl.search,
         method: req.method,
-        headers: {
-            ...req.headers,
-            host: parsedUrl.host,
-        }
+        headers: proxyHeaders
     };
 
     const proxyReq = http.request(options, (proxyRes) => {
@@ -149,8 +151,37 @@ app.all([/^\/form(\/.*)?$/, /^\/form-waiting(\/.*)?$/], (req, res, next) => {
             proxyRes.headers['access-control-allow-credentials'] = 'true';
         }
 
-        res.writeHead(proxyRes.statusCode, proxyRes.headers);
-        proxyRes.pipe(res, { end: true });
+        const contentType = proxyRes.headers['content-type'] || '';
+        const isText = contentType.includes('text/html') || contentType.includes('application/json') || contentType.includes('text/plain');
+
+        if (isText) {
+            let body = [];
+            proxyRes.on('data', (chunk) => {
+                body.push(chunk);
+            });
+            proxyRes.on('end', () => {
+                const buffer = Buffer.concat(body);
+                let content = buffer.toString('utf8');
+
+                // Determine client's base URL (e.g. https://iao.mobble.ai)
+                const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+                const clientHost = req.headers.host;
+                const clientBaseUrl = `${protocol}://${clientHost}`;
+
+                // Replace all occurrences of http://localhost:5678 with the client's public URL
+                content = content.replace(/http:\/\/localhost:5678/g, clientBaseUrl);
+
+                const modifiedBuffer = Buffer.from(content, 'utf8');
+                proxyRes.headers['content-length'] = modifiedBuffer.length;
+                delete proxyRes.headers['content-encoding'];
+
+                res.writeHead(proxyRes.statusCode, proxyRes.headers);
+                res.end(modifiedBuffer);
+            });
+        } else {
+            res.writeHead(proxyRes.statusCode, proxyRes.headers);
+            proxyRes.pipe(res, { end: true });
+        }
     });
 
     proxyReq.on('error', (err) => {
