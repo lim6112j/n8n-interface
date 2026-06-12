@@ -111,6 +111,20 @@ app.use(passport.session());
 
 // Reverse Proxy for n8n Forms and Wait node states
 app.all([/^\/form(\/.*)?$/, /^\/form-waiting(\/.*)?$/], (req, res, next) => {
+    // Add CORS headers for browser requests (especially inside sandboxed iframes)
+    const origin = req.headers.origin || '*';
+    res.setHeader('access-control-allow-origin', origin);
+    res.setHeader('access-control-allow-methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('access-control-allow-headers', 'Content-Type, Authorization, x-auth-token');
+    if (origin !== '*') {
+        res.setHeader('access-control-allow-credentials', 'true');
+    }
+
+    // Intercept OPTIONS preflight requests
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+    }
+
     if (!req.isAuthenticated()) {
         return res.status(401).send('Unauthorized');
     }
@@ -131,6 +145,14 @@ app.all([/^\/form(\/.*)?$/, /^\/form-waiting(\/.*)?$/], (req, res, next) => {
     };
 
     const proxyReq = http.request(options, (proxyRes) => {
+        // Ensure CORS headers are also included on the forwarded response headers
+        proxyRes.headers['access-control-allow-origin'] = origin;
+        proxyRes.headers['access-control-allow-methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+        proxyRes.headers['access-control-allow-headers'] = 'Content-Type, Authorization, x-auth-token';
+        if (origin !== '*') {
+            proxyRes.headers['access-control-allow-credentials'] = 'true';
+        }
+
         res.writeHead(proxyRes.statusCode, proxyRes.headers);
         proxyRes.pipe(res, { end: true });
     });
