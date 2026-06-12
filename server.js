@@ -93,8 +93,6 @@ const httpsAgent = new https.Agent({
     maxVersion: 'TLSv1.2'
 });
 
-app.use(express.json()); // Parse JSON bodies — MUST be before routes that need body parsing
-
 // Configure session
 app.use(session({
     store: new pgSession({
@@ -110,6 +108,43 @@ app.use(session({
 // Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Reverse Proxy for n8n Forms and Wait node states
+app.all(['/form/*', '/form-waiting/*'], (req, res, next) => {
+    if (!req.isAuthenticated()) {
+        return res.status(401).send('Unauthorized');
+    }
+
+    const targetUrl = `http://localhost:5678${req.originalUrl}`;
+    console.log(`[proxy] Proxying ${req.method} ${req.originalUrl} -> ${targetUrl}`);
+
+    const parsedUrl = new URL(targetUrl);
+    const options = {
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port || 80,
+        path: parsedUrl.pathname + parsedUrl.search,
+        method: req.method,
+        headers: {
+            ...req.headers,
+            host: parsedUrl.host,
+        }
+    };
+
+    const proxyReq = http.request(options, (proxyRes) => {
+        res.writeHead(proxyRes.statusCode, proxyRes.headers);
+        proxyRes.pipe(res, { end: true });
+    });
+
+    proxyReq.on('error', (err) => {
+        console.error(`[proxy] Error proxying to n8n:`, err.message);
+        res.status(502).send(`Bad Gateway: Failed to reach n8n form backend.`);
+    });
+
+    req.pipe(proxyReq, { end: true });
+});
+
+app.use(express.json()); // Parse JSON bodies — MUST be before routes that need body parsing
+
 
 // Passport serialization
 passport.serializeUser((user, done) => {

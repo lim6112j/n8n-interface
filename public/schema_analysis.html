@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ciel Mobility AI - 스키마 분석</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@300;500;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-violet: #bd00ff;
+            --bg-dark: #050a14;
+            --panel-bg: rgba(5, 10, 20, 0.6);
+            --danger: #ff2a6d;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(189, 0, 255, 0.05) 0%, transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(0, 243, 255, 0.05) 0%, transparent 25%);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        #matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.15;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .controls-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .theme-toggle {
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--neon-cyan);
+            color: #000;
+            box-shadow: 0 0 15px var(--neon-cyan);
+        }
+
+        .form-container {
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+            width: 95%;
+            max-width: 900px;
+            background: var(--panel-bg);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 243, 255, 0.05);
+            padding: 30px;
+            z-index: 10;
+            transition: all 0.3s;
+        }
+
+        .header-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+            padding-bottom: 15px;
+        }
+
+        .title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--neon-cyan);
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+            letter-spacing: 1px;
+        }
+
+        .iframe-wrapper {
+            flex: 1;
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(189, 0, 255, 0.2);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .back-link {
+            margin-top: 20px;
+            color: #8892b0;
+            text-decoration: none;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            align-self: flex-start;
+        }
+
+        .back-link:hover {
+            color: var(--neon-cyan);
+            text-shadow: 0 0 8px rgba(0, 243, 255, 0.3);
+        }
+
+        /* Light Theme Styles */
+        body.light-theme {
+            --neon-cyan: #0077b6;
+            --neon-violet: #7209b7;
+            --bg-dark: #f0f2f5;
+            --panel-bg: rgba(255, 255, 255, 0.9);
+            color: #333;
+            background-image: none;
+        }
+
+        body.light-theme .form-container {
+            border-color: rgba(0, 119, 182, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05), inset 0 0 10px rgba(0, 119, 182, 0.05);
+        }
+
+        body.light-theme .header-area {
+            border-bottom-color: rgba(0, 119, 182, 0.2);
+        }
+
+        body.light-theme .title {
+            color: #0077b6;
+            text-shadow: none;
+        }
+
+        body.light-theme .iframe-wrapper {
+            border-color: rgba(114, 9, 183, 0.2);
+            background: #fff;
+        }
+
+        body.light-theme .back-link {
+            color: #555;
+        }
+
+        body.light-theme .back-link:hover {
+            color: #0077b6;
+            text-shadow: none;
+        }
+
+        body.light-theme .theme-toggle {
+            background: transparent;
+            border-color: #0077b6;
+            color: #0077b6;
+        }
+
+        body.light-theme .theme-toggle:hover {
+            background: #0077b6;
+            color: #fff;
+            box-shadow: none;
+        }
+
+        body.light-theme #matrix-bg {
+            opacity: 0.05;
+            filter: invert(1);
+        }
+
+        /* Sunset Theme Styles */
+        body.sunset-theme {
+            --neon-cyan: #ff7b00;
+            --neon-violet: #ff0055;
+            --bg-dark: #1f0b0f;
+            --panel-bg: rgba(40, 15, 20, 0.8);
+            color: #ffe6e6;
+        }
+
+        body.sunset-theme .form-container {
+            border-color: rgba(255, 123, 0, 0.3);
+            box-shadow: 0 0 30px rgba(255, 123, 0, 0.15), inset 0 0 10px rgba(255, 123, 0, 0.05);
+        }
+
+        body.sunset-theme .header-area {
+            border-bottom-color: rgba(255, 123, 0, 0.2);
+        }
+
+        body.sunset-theme .title {
+            color: #ff7b00;
+            text-shadow: 0 0 10px rgba(255, 123, 0, 0.4);
+        }
+
+        body.sunset-theme .iframe-wrapper {
+            border-color: rgba(255, 0, 85, 0.3);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        body.sunset-theme .back-link {
+            color: #ffb380;
+        }
+
+        body.sunset-theme .back-link:hover {
+            color: #ff7b00;
+            text-shadow: 0 0 8px rgba(255, 123, 0, 0.4);
+        }
+
+        body.sunset-theme .theme-toggle {
+            border-color: #ff7b00;
+            color: #ff7b00;
+            background: transparent;
+        }
+
+        body.sunset-theme .theme-toggle:hover {
+            background: #ff7b00;
+            color: #000;
+            box-shadow: 0 0 15px var(--neon-cyan);
+        }
+
+        body.sunset-theme #matrix-bg {
+            opacity: 0.1;
+            filter: hue-rotate(320deg) brightness(1.5);
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="matrix-bg"></canvas>
+
+    <div class="controls-container">
+        <button id="themeToggle" class="theme-toggle" title="테마 변경">
+            <svg viewBox="0 0 24 24" width="18" height="18">
+                <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </button>
+    </div>
+
+    <div class="form-container">
+        <div class="header-area">
+            <div class="title">Schema Analysis</div>
+        </div>
+
+        <div class="iframe-wrapper">
+            <iframe 
+                src="/form/7bd4f745-3c26-4d1c-a5ce-4a827eaec7c4" 
+                allowfullscreen>
+            </iframe>
+        </div>
+
+        <a href="index.html" class="back-link">← 홈으로 돌아가기</a>
+    </div>
+
+    <script>
+        // Matrix Background
+        const canvas = document.getElementById('matrix-bg');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+        const cols = Math.floor(width / 20) + 1;
+        const ypos = Array(cols).fill(0);
+
+        // Map theme name to rain color
+        function getMatrixColor() {
+            if (document.body.classList.contains('light-theme')) {
+                return '#0077b6';
+            } else if (document.body.classList.contains('sunset-theme')) {
+                return '#ff7b00';
+            } else {
+                return '#00f3ff';
+            }
+        }
+
+        function matrix() {
+            ctx.fillStyle = document.body.classList.contains('light-theme') 
+                ? 'rgba(240, 242, 245, 0.05)' 
+                : 'rgba(5, 10, 20, 0.05)';
+            ctx.fillRect(0, 0, width, height);
+            ctx.fillStyle = getMatrixColor();
+            ctx.font = '15px monospace';
+            ypos.forEach((y, ind) => {
+                const text = String.fromCharCode(Math.random() * 128);
+                const x = ind * 20;
+                ctx.fillText(text, x, y);
+                if (y > 100 + Math.random() * 10000) ypos[ind] = 0;
+                else ypos[ind] = y + 20;
+            });
+        }
+        setInterval(matrix, 50);
+        window.addEventListener('resize', () => { 
+            width = canvas.width = window.innerWidth; 
+            height = canvas.height = window.innerHeight; 
+        });
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const themes = ['dark', 'light', 'sunset'];
+        let currentThemeIndex = 0;
+
+        function setTheme(theme) {
+            document.body.classList.remove('light-theme', 'sunset-theme');
+            if (theme === 'light') document.body.classList.add('light-theme');
+            if (theme === 'sunset') document.body.classList.add('sunset-theme');
+            localStorage.setItem('theme', theme);
+
+            const idx = themes.indexOf(theme);
+            currentThemeIndex = idx > -1 ? idx : 0;
+        }
+
+        // Retrieve saved theme or default to dark
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme && themes.includes(savedTheme)) {
+            setTheme(savedTheme);
+        } else {
+            setTheme('dark');
+        }
+
+        themeToggle.addEventListener('click', () => {
+            currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+            setTheme(themes[currentThemeIndex]);
+        });
+    </script>
+</body>
+</html>
