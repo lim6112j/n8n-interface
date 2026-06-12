@@ -158,23 +158,31 @@ app.all([/^\/form(\/.*)?$/, /^\/form-waiting(\/.*)?$/], (req, res, next) => {
                 body.push(chunk);
             });
             proxyRes.on('end', () => {
-                const buffer = Buffer.concat(body);
-                let content = buffer.toString('utf8');
+                try {
+                    const buffer = Buffer.concat(body);
+                    let content = buffer.toString('utf8');
 
-                // Determine client's base URL (e.g. https://iao.mobble.ai)
-                const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-                const clientHost = req.headers.host;
-                const clientBaseUrl = `${protocol}://${clientHost}`;
+                    // Determine client's base URL (e.g. https://iao.mobble.ai)
+                    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+                    const clientHost = req.headers.host || 'localhost:3000';
+                    const clientBaseUrl = `${protocol}://${clientHost}`;
 
-                // Replace all occurrences of http://localhost:5678 with the client's public URL
-                content = content.replace(/http:\/\/localhost:5678/g, clientBaseUrl);
+                    // Replace all occurrences of http://localhost:5678 with the client's public URL
+                    content = content.replace(/http:\/\/localhost:5678/g, clientBaseUrl);
 
-                const modifiedBuffer = Buffer.from(content, 'utf8');
-                proxyRes.headers['content-length'] = modifiedBuffer.length;
-                delete proxyRes.headers['content-encoding'];
+                    const modifiedBuffer = Buffer.from(content, 'utf8');
+                    proxyRes.headers['content-length'] = modifiedBuffer.length;
+                    delete proxyRes.headers['content-encoding'];
+                    delete proxyRes.headers['transfer-encoding']; // Avoid protocol mismatch when sending modified content
 
-                res.writeHead(proxyRes.statusCode, proxyRes.headers);
-                res.end(modifiedBuffer);
+                    res.writeHead(proxyRes.statusCode, proxyRes.headers);
+                    res.end(modifiedBuffer);
+                } catch (err) {
+                    console.error('[proxy] Error rewriting response:', err.message);
+                    if (!res.headersSent) {
+                        res.status(500).send('Internal Server Error: Failed to rewrite response');
+                    }
+                }
             });
         } else {
             res.writeHead(proxyRes.statusCode, proxyRes.headers);
