@@ -432,8 +432,8 @@ app.use((req, res, next) => {
         if (!req.isAuthenticated()) {
             return res.redirect('/');
         }
-        // Specific check for admin.html and system_prompts.html
-        if ((req.path === '/admin.html' || req.path === '/system_prompts.html') && req.user.role === 'user') {
+        // Specific check for admin.html, system_prompts.html and lightrag.html
+        if ((req.path === '/admin.html' || req.path === '/system_prompts.html' || req.path === '/lightrag.html') && req.user.role === 'user') {
             return res.redirect('/');
         }
     }
@@ -951,6 +951,94 @@ app.post('/interact', async (req, res) => {
         console.error('Interaction Error:', error.message);
         res.status(500).json({ error: 'Failed to communicate with AI agent', details: error.message });
     }
+});
+
+// Reverse Proxy for LightRAG WebUI and API (Admin only)
+app.all([
+    /^\/webui(\/.*)?$/,
+    /^\/static(\/.*)?$/,
+    /^\/docs(\/.*)?$/,
+    /^\/redoc(\/.*)?$/,
+    /^\/openapi\.json$/,
+    /^\/query(\/.*)?$/,
+    /^\/documents(\/.*)?$/,
+    /^\/graphs(\/.*)?$/,
+    /^\/graph(\/.*)?$/,
+    /^\/health(\/.*)?$/,
+    /^\/api(\/.*)?$/
+], requireAdminAuth, (req, res, next) => {
+    console.log(`[lightrag-proxy] Proxying ${req.method} ${req.originalUrl} -> http://127.0.0.1:9621${req.originalUrl}`);
+
+    const proxyHeaders = { ...req.headers };
+    // Strip accept-encoding to avoid compression issues if rewriting is needed
+    delete proxyHeaders['accept-encoding'];
+    proxyHeaders['host'] = 'localhost:9621';
+
+    const options = {
+        hostname: '127.0.0.1',
+        port: 9621,
+        path: req.originalUrl,
+        method: req.method,
+        headers: proxyHeaders
+    };
+
+    const proxyReq = http.request(options, (proxyRes) => {
+        // Add CORS headers for browser requests
+        const origin = req.headers.origin || '*';
+        proxyRes.headers['access-control-allow-origin'] = origin;
+        proxyRes.headers['access-control-allow-methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+        proxyRes.headers['access-control-allow-headers'] = 'Content-Type, Authorization, x-auth-token';
+        if (origin !== '*') {
+            proxyRes.headers['access-control-allow-credentials'] = 'true';
+        }
+
+        const contentType = proxyRes.headers['content-type'] || '';
+        const isText = contentType.includes('text/html') || contentType.includes('application/json') || contentType.includes('text/plain');
+
+        if (isText) {
+            let body = [];
+            proxyRes.on('data', (chunk) => {
+                body.push(chunk);
+            });
+            proxyRes.on('end', () => {
+                try {
+                    const buffer = Buffer.concat(body);
+                    let content = buffer.toString('utf8');
+
+                    // Determine client's base URL (e.g. https://iao.mobble.ai)
+                    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+                    const clientHost = req.headers.host || 'localhost:3000';
+                    const clientBaseUrl = `${protocol}://${clientHost}`;
+
+                    // Replace all occurrences of http://localhost:9621 with the client's public URL
+                    content = content.replace(/http:\/\/localhost:9621/g, clientBaseUrl);
+
+                    const modifiedBuffer = Buffer.from(content, 'utf8');
+                    proxyRes.headers['content-length'] = modifiedBuffer.length;
+                    delete proxyRes.headers['content-encoding'];
+                    delete proxyRes.headers['transfer-encoding'];
+
+                    res.writeHead(proxyRes.statusCode, proxyRes.headers);
+                    res.end(modifiedBuffer);
+                } catch (err) {
+                    console.error('[lightrag-proxy] Error rewriting response:', err.message);
+                    if (!res.headersSent) {
+                        res.status(500).send('Internal Server Error: Failed to rewrite response');
+                    }
+                }
+            });
+        } else {
+            res.writeHead(proxyRes.statusCode, proxyRes.headers);
+            proxyRes.pipe(res, { end: true });
+        }
+    });
+
+    proxyReq.on('error', (err) => {
+        console.error(`[lightrag-proxy] Error proxying to LightRAG:`, err.message);
+        res.status(502).send(`Bad Gateway: Failed to reach LightRAG backend.`);
+    });
+
+    req.pipe(proxyReq, { end: true });
 });
 
 const server = app.listen(port, () => {
