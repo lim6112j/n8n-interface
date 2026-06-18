@@ -1040,7 +1040,15 @@ app.all([
         res.status(502).send(`Bad Gateway: Failed to reach LightRAG backend.`);
     });
 
-    req.pipe(proxyReq, { end: true });
+    if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+        proxyReq.end();
+    } else if (req.headers['content-type'] && req.headers['content-type'].includes('application/json') && req.body !== undefined) {
+        const bodyData = JSON.stringify(req.body);
+        proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+        proxyReq.end(bodyData);
+    } else {
+        req.pipe(proxyReq, { end: true });
+    }
 });
 
 const server = app.listen(port, () => {
