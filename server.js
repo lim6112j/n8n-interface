@@ -432,8 +432,8 @@ app.use((req, res, next) => {
         if (!req.isAuthenticated()) {
             return res.redirect('/');
         }
-        // Specific check for admin.html, system_prompts.html, lightrag.html and lightrag_test.html
-        if ((req.path === '/admin.html' || req.path === '/system_prompts.html' || req.path === '/lightrag.html' || req.path === '/lightrag_test.html') && req.user.role === 'user') {
+        // Specific check for admin.html, system_prompts.html, cielrag.html and cielrag_test.html
+        if ((req.path === '/admin.html' || req.path === '/system_prompts.html' || req.path === '/cielrag.html' || req.path === '/cielrag_test.html') && req.user.role === 'user') {
             return res.redirect('/');
         }
     }
@@ -953,7 +953,7 @@ app.post('/interact', async (req, res) => {
     }
 });
 
-// Reverse Proxy for LightRAG WebUI and API (Admin only)
+// Reverse Proxy for CielRag WebUI and API (Admin only)
 app.all([
     /^\/webui(\/.*)?$/,
     /^\/static(\/.*)?$/,
@@ -969,7 +969,7 @@ app.all([
     /^\/login(\/.*)?$/,
     /^\/api(\/.*)?$/
 ], requireAdminAuth, (req, res, next) => {
-    console.log(`[lightrag-proxy] Proxying ${req.method} ${req.originalUrl} -> http://127.0.0.1:9621${req.originalUrl}`);
+    console.log(`[cielrag-proxy] Proxying ${req.method} ${req.originalUrl} -> http://127.0.0.1:9621${req.originalUrl}`);
 
     const proxyHeaders = { ...req.headers };
     // Strip accept-encoding to avoid compression issues if rewriting is needed
@@ -1023,7 +1023,7 @@ app.all([
                     res.writeHead(proxyRes.statusCode, proxyRes.headers);
                     res.end(modifiedBuffer);
                 } catch (err) {
-                    console.error('[lightrag-proxy] Error rewriting response:', err.message);
+                    console.error('[cielrag-proxy] Error rewriting response:', err.message);
                     if (!res.headersSent) {
                         res.status(500).send('Internal Server Error: Failed to rewrite response');
                     }
@@ -1036,8 +1036,8 @@ app.all([
     });
 
     proxyReq.on('error', (err) => {
-        console.error(`[lightrag-proxy] Error proxying to LightRAG:`, err.message);
-        res.status(502).send(`Bad Gateway: Failed to reach LightRAG backend.`);
+        console.error(`[cielrag-proxy] Error proxying to CielRag:`, err.message);
+        res.status(502).send(`Bad Gateway: Failed to reach CielRag backend.`);
     });
 
     if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
