@@ -432,8 +432,8 @@ app.use((req, res, next) => {
         if (!req.isAuthenticated()) {
             return res.redirect('/');
         }
-        // Specific check for admin.html, system_prompts.html and lightrag.html
-        if ((req.path === '/admin.html' || req.path === '/system_prompts.html' || req.path === '/lightrag.html') && req.user.role === 'user') {
+        // Specific check for admin.html, system_prompts.html, lightrag.html and lightrag_test.html
+        if ((req.path === '/admin.html' || req.path === '/system_prompts.html' || req.path === '/lightrag.html' || req.path === '/lightrag_test.html') && req.user.role === 'user') {
             return res.redirect('/');
         }
     }
