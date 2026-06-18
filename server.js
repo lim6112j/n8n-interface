@@ -109,8 +109,8 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Reverse Proxy for n8n Forms and Wait node states
-app.all([/^\/form(\/.*)?$/, /^\/form-waiting(\/.*)?$/], (req, res, next) => {
+// Reverse Proxy for n8n Forms, Wait node states, and Webhooks
+app.all([/^\/form(\/.*)?$/, /^\/form-waiting(\/.*)?$/, /^\/webhook(\/.*)?$/], (req, res, next) => {
     // Add CORS headers for browser requests (especially inside sandboxed iframes)
     const origin = req.headers.origin || '*';
     res.setHeader('access-control-allow-origin', origin);
