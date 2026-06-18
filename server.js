@@ -965,6 +965,8 @@ app.all([
     /^\/graphs(\/.*)?$/,
     /^\/graph(\/.*)?$/,
     /^\/health(\/.*)?$/,
+    /^\/auth-status(\/.*)?$/,
+    /^\/login(\/.*)?$/,
     /^\/api(\/.*)?$/
 ], requireAdminAuth, (req, res, next) => {
     console.log(`[lightrag-proxy] Proxying ${req.method} ${req.originalUrl} -> http://127.0.0.1:9621${req.originalUrl}`);
